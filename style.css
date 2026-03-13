@@ -1,0 +1,650 @@
+.gh-health-badge {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1.35;
+  position: relative;
+  z-index: 500;
+  max-width: 320px;
+}
+
+.gh-health-page {
+  margin: 10px 0 16px 0;
+  display: block;
+}
+
+.gh-health-card {
+  margin-top: 10px;
+}
+
+.gh-health-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+.gh-health-pill-score {
+  font-variant-numeric: tabular-nums;
+}
+
+.gh-health-dot {
+  font-size: 9px;
+  line-height: 1;
+}
+
+.gh-health-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  padding-top: 0 !important;
+  padding-left: 2px;
+  transition: max-height 300ms ease, opacity 200ms ease, padding-top 200ms ease;
+}
+
+.gh-health-badge:not(.gh-health-static):hover .gh-health-details {
+  max-height: 300px !important;
+  opacity: 1 !important;
+  padding-top: 4px !important;
+}
+
+.gh-health-line {
+  color: var(--color-fg-muted, #57606a);
+}
+
+.gh-health-warning {
+  color: var(--color-attention-fg, #9a6700);
+}
+
+.gh-health-sparkline-wrap {
+  display: flex;
+  align-items: center;
+  cursor: default;
+}
+
+.gh-health-sparkline {
+  display: block;
+}
+
+.gh-health-green .gh-health-pill {
+  background: #dafbe1;
+  border-color: #2ea043;
+  color: #1a7f37;
+}
+
+.gh-health-yellow .gh-health-pill {
+  background: #fff8c5;
+  border-color: #d29922;
+  color: #9a6700;
+}
+
+.gh-health-red .gh-health-pill {
+  background: #ffebe9;
+  border-color: #da3633;
+  color: #cf222e;
+}
+
+.gh-health-loading .gh-health-pill,
+.gh-health-not-found .gh-health-pill,
+.gh-health-error .gh-health-pill {
+  background: #f6f8fa;
+  border-color: #d0d7de;
+  color: #57606a;
+}
+
+.gh-health-rate-limited .gh-health-pill {
+  background: #ffebe9;
+  border-color: #da3633;
+  color: #cf222e;
+}
+
+.gh-readme-toc {
+  position: fixed;
+  left: 16px;
+  top: 80px;
+  width: 200px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  background: var(--color-canvas-overlay);
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 12px;
+  z-index: 400;
+}
+
+.gh-readme-toc.is-collapsed {
+  width: 40px;
+  padding: 8px;
+}
+
+.gh-readme-toc.is-collapsed .gh-readme-toc-title,
+.gh-readme-toc.is-collapsed .gh-readme-toc-list {
+  display: none;
+}
+
+.gh-readme-toc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.gh-readme-toc-title {
+  color: var(--color-fg-default);
+  font-weight: 600;
+}
+
+.gh-readme-toc-toggle {
+  border: 1px solid var(--color-border-default);
+  background: var(--color-canvas-overlay);
+  color: var(--color-fg-muted);
+  border-radius: 6px;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+}
+
+.gh-readme-toc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gh-readme-toc-item {
+  color: var(--color-fg-default);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  padding-left: 6px;
+}
+
+.gh-readme-toc-item:hover {
+  background: var(--color-canvas-subtle);
+}
+
+.gh-readme-toc-item.is-sub {
+  margin-left: 12px;
+  color: var(--color-fg-muted);
+}
+
+.gh-readme-toc-item.is-active {
+  border-left-color: var(--color-accent-fg);
+  color: var(--color-accent-fg);
+}
+
+.gh-readme-reading-time {
+  font-size: 12px;
+  color: var(--color-fg-muted, #57606a);
+  margin-bottom: 12px;
+}
+
+.gh-size-label {
+  margin-left: 8px;
+  color: var(--color-fg-muted, #57606a);
+  font-size: 11px;
+}
+
+.gh-size-label.is-large-red {
+  color: #da3633;
+}
+
+.gh-size-label.is-large-amber {
+  color: #d29922;
+}
+
+.gh-total-size {
+  margin: 6px 0;
+  font-size: 12px;
+  color: var(--color-fg-muted, #57606a);
+}
+
+.gh-pr-complexity {
+  margin-top: 10px;
+  border-radius: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-default, #d0d7de);
+}
+
+.gh-pr-simple { background: #dafbe1; }
+.gh-pr-moderate { background: #ddf4ff; }
+.gh-pr-large { background: #fff8c5; }
+.gh-pr-massive { background: #ffebe9; }
+
+.gh-pr-complexity-main {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-fg-default, #1f2328);
+}
+
+.gh-pr-complexity-warn {
+  margin-top: 6px;
+  color: #b62324;
+  font-size: 12px;
+}
+
+.gh-pr-breakdown-toggle {
+  margin-top: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-fg, #2f81f7);
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+}
+
+.gh-pr-breakdown {
+  display: none;
+  margin-top: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.gh-pr-breakdown.is-open {
+  display: flex;
+}
+
+.gh-pr-breakdown-item {
+  font-size: 12px;
+  color: var(--color-fg-muted, #57606a);
+}
+
+.gh-todo-line {
+  border-left: 3px solid #2f81f7;
+  padding-left: 6px;
+}
+
+.gh-todo-pill {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-right: 6px;
+  font-weight: 600;
+  display: inline-block;
+  color: #fff;
+}
+
+.gh-todo-todo,
+.gh-todo-note,
+.gh-todo-optimize {
+  background: #0969da;
+}
+
+.gh-todo-fixme,
+.gh-todo-bug,
+.gh-todo-xxx {
+  background: #da3633;
+}
+
+.gh-todo-hack {
+  background: #d29922;
+}
+
+.gh-todo-deprecated {
+  background: #57606a;
+}
+
+.gh-todo-summary {
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--color-fg-muted, #57606a);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gh-todo-summary-link {
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-fg, #2f81f7);
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+}
+
+.gh-insights-panel {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: var(--color-canvas-default, #ffffff);
+}
+
+.gh-insight-card {
+  min-width: 140px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--color-canvas-default, #ffffff);
+}
+
+.gh-insight-label {
+  font-size: 11px;
+  color: var(--color-fg-muted, #57606a);
+}
+
+.gh-insight-value {
+  font-size: 13px;
+  color: var(--color-fg-default, #1f2328);
+  font-weight: 600;
+}
+
+.gh-issue-age {
+  margin-left: 8px;
+  font-size: 11px;
+}
+
+.gh-issue-new { color: #1a7f37; }
+.gh-issue-recent { color: #0969da; }
+.gh-issue-aging { color: #d29922; }
+.gh-issue-old { color: #bc4c00; }
+.gh-issue-stale { color: #da3633; }
+
+.gh-issues-summary {
+  margin: 8px 0;
+  font-size: 12px;
+  color: var(--color-fg-muted, #57606a);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gh-issues-filter {
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-fg, #2f81f7);
+  cursor: pointer;
+  padding: 0;
+  text-transform: capitalize;
+}
+
+.gh-filetype-badge {
+  font-size: 9px;
+  font-weight: 700;
+  width: 24px;
+  height: 16px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.gh-quick-clone-wrap {
+  position: relative;
+  display: inline-flex;
+  margin-right: 8px;
+}
+
+.gh-quick-clone-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 310px;
+  border: 1px solid var(--color-border-default, #d0d7de);
+  border-radius: 8px;
+  background: var(--color-canvas-default, #ffffff);
+  z-index: 450;
+}
+
+.gh-quick-clone-panel.is-open {
+  display: block;
+}
+
+.gh-quick-clone-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--color-border-default, #d0d7de);
+  background: transparent;
+  padding: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 12px;
+  color: var(--color-fg-default, #1f2328);
+  cursor: pointer;
+}
+
+.gh-quick-clone-option:last-child {
+  border-bottom: 0;
+}
+
+.gh-bookmark-host {
+  position: relative;
+}
+
+.gh-bookmark-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 5px 12px;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--color-fg-default);
+  background: var(--color-btn-bg);
+  border: 1px solid var(--color-btn-border);
+}
+
+.gh-bookmark-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 300px;
+  border: 1px solid var(--color-border-default, #d0d7de);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--color-canvas-default, #ffffff);
+  z-index: 450;
+}
+
+.gh-bookmark-panel.is-open {
+  display: block;
+}
+
+.gh-bookmark-input,
+.gh-bookmark-note {
+  width: 100%;
+  margin-bottom: 8px;
+  border: 1px solid var(--color-border-default, #d0d7de);
+  border-radius: 6px;
+  padding: 6px;
+  color: var(--color-fg-default, #1f2328);
+  background: var(--color-canvas-default, #ffffff);
+  font-size: 12px;
+}
+
+.gh-bookmark-note {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.gh-star-history {
+  margin-top: 6px;
+}
+
+.gh-star-sparkline {
+  display: block;
+}
+
+.gh-star-history-meta {
+  color: var(--color-fg-muted, #57606a);
+  font-size: 11px;
+}
+
+.gh-commit-quality-icon {
+  margin-left: 6px;
+  font-size: 12px;
+}
+
+.gh-commit-quality-icon.is-good {
+  color: #1a7f37;
+}
+
+.gh-commit-quality-icon.is-bad {
+  color: #d29922;
+}
+
+.gh-commit-quality-summary {
+  font-size: 12px;
+  color: var(--color-fg-muted, #57606a);
+  margin-bottom: 8px;
+}
+
+.gh-open-editor-btn {
+  margin-right: 8px;
+}
+
+.gh-file-actions-group {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 8px;
+}
+
+.gh-open-ide-wrap {
+  position: relative;
+  display: inline-flex;
+  margin-right: 8px;
+}
+
+.gh-open-ide-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 190px;
+  border: 1px solid var(--color-border-default, #d0d7de);
+  border-radius: 8px;
+  background: var(--color-canvas-default, #ffffff);
+  z-index: 450;
+}
+
+.gh-open-ide-panel.is-open {
+  display: block;
+}
+
+.gh-open-ide-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--color-border-default, #d0d7de);
+  background: transparent;
+  padding: 8px;
+  font-size: 12px;
+  color: var(--color-fg-default, #1f2328);
+  cursor: pointer;
+}
+
+.gh-open-ide-item:last-child {
+  border-bottom: 0;
+}
+
+.gh-loc-block {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--color-fg-muted, #57606a);
+  cursor: pointer;
+}
+
+.gh-loc-panel {
+  display: none;
+  margin-top: 8px;
+  border: 1px solid var(--color-border-default, #d0d7de);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--color-canvas-default, #ffffff);
+}
+
+.gh-loc-panel.is-open {
+  display: block;
+}
+
+.gh-loc-row {
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--color-fg-default, #1f2328);
+}
+
+.gh-loc-bar {
+  margin-top: 4px;
+  height: 6px;
+  border-radius: 999px;
+  background: #d0d7de;
+  overflow: hidden;
+}
+
+.gh-loc-fill {
+  display: block;
+  height: 100%;
+}
+
+.gh-loc-toggle {
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-fg, #2f81f7);
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+}
+
+.gh-loc-more {
+  display: none;
+}
+
+.gh-loc-more.is-open {
+  display: block;
+}
+
+@media (max-width: 1200px) {
+  .gh-toc-panel {
+    display: none !important;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .gh-health-green .gh-health-pill {
+    background: rgba(46, 160, 67, 0.16);
+    border-color: #238636;
+    color: #3fb950;
+  }
+
+  .gh-health-yellow .gh-health-pill {
+    background: rgba(210, 153, 34, 0.18);
+    border-color: #d29922;
+    color: #d29922;
+  }
+
+  .gh-health-red .gh-health-pill {
+    background: rgba(218, 54, 51, 0.18);
+    border-color: #da3633;
+    color: #f85149;
+  }
+
+  .gh-health-loading .gh-health-pill,
+  .gh-health-not-found .gh-health-pill,
+  .gh-health-error .gh-health-pill {
+    background: #161b22;
+    border-color: #30363d;
+    color: #8b949e;
+  }
+
+  .gh-health-rate-limited .gh-health-pill {
+    background: rgba(218, 54, 51, 0.18);
+    border-color: #da3633;
+    color: #f85149;
+  }
+}

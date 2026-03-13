@@ -1,0 +1,54 @@
+{
+  "manifest_version": 3,
+  "name": "GitHub Repository Health",
+  "version": "2.0.0",
+  "description": "Health scores, dependency risk, and trend history for GitHub repos.",
+  "permissions": ["storage", "activeTab", "tabs", "alarms", "contextMenus"],
+  "host_permissions": [
+    "https://api.github.com/*",
+    "https://github.com/*",
+    "https://registry.npmjs.org/*",
+    "https://api.osv.dev/*",
+    "https://raw.githubusercontent.com/*",
+    "https://api.codetabs.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "js": ["jszip.min.js", "content.js"],
+      "css": ["style.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "GitHub Repository Health",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "commands": {
+    "toggle-badges": {
+      "suggested_key": {
+        "default": "Alt+H"
+      },
+      "description": "Toggle repository health badges"
+    },
+    "open-in-ide": {
+      "suggested_key": {
+        "default": "Alt+O"
+      },
+      "description": "Open repo in online IDE"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

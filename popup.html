@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Repository Health</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-shell">
+    <header class="popup-header">
+      <img src="icons/icon48.png" alt="" class="popup-logo" width="18" height="18">
+      <span class="popup-title">GitHub Repository Health</span>
+    </header>
+
+    <nav class="tab-bar" aria-label="Popup sections">
+      <button class="tab-button is-active" data-tab="overview" type="button">Overview</button>
+      <button class="tab-button" data-tab="watchlist" type="button">Watchlist</button>
+      <button class="tab-button" data-tab="compare" type="button">Compare</button>
+      <button class="tab-button" data-tab="bookmarks" type="button" title="Bookmarks">Bookmarks</button>
+      <button class="tab-button" data-tab="notifications" type="button" title="Notifications">Notifications</button>
+      <button class="tab-button" data-tab="settings" type="button">Settings</button>
+    </nav>
+
+    <main class="popup-main">
+      <section class="tab-panel is-active" id="tab-overview">
+        <div id="overview-content" class="panel-stack"></div>
+      </section>
+
+      <section class="tab-panel" id="tab-watchlist">
+        <div id="watchlist-alert"></div>
+        <div id="watchlist-content" class="panel-stack"></div>
+      </section>
+
+      <section class="tab-panel" id="tab-compare">
+        <div class="compare-form">
+          <input id="compare-left" class="text-input" type="text" placeholder="owner/repo  e.g. facebook/react" spellcheck="false" autocomplete="off">
+          <input id="compare-right" class="text-input" type="text" placeholder="owner/repo  e.g. vuejs/vue" spellcheck="false" autocomplete="off">
+          <button id="compare-button" class="btn btn-primary" type="button">Compare</button>
+        </div>
+        <div id="compare-results" class="panel-stack compare-results"></div>
+      </section>
+
+      <section class="tab-panel" id="tab-bookmarks">
+        <div class="bookmark-controls">
+          <input id="bookmark-search" class="text-input" type="text" placeholder="Search repos or tags" spellcheck="false" autocomplete="off">
+          <div id="bookmark-tags" class="bookmark-tags"></div>
+        </div>
+        <div id="bookmarks-content" class="panel-stack"></div>
+      </section>
+
+      <section class="tab-panel" id="tab-notifications">
+        <div class="button-stack">
+          <button id="notifications-refresh" class="btn" type="button">Refresh</button>
+          <button id="notifications-mark-all" class="btn btn-primary" type="button">Mark all read</button>
+        </div>
+        <div id="notifications-content" class="panel-stack"></div>
+      </section>
+
+      <section class="tab-panel" id="tab-settings">
+        <div class="settings-list">
+          <label class="toggle-row"><span>Show badges on search results</span><input id="toggle-search" type="checkbox"></label>
+          <label class="toggle-row"><span>Show badges on trending page</span><input id="toggle-trending" type="checkbox"></label>
+          <label class="toggle-row"><span>Show dependency risk section</span><input id="toggle-deps" type="checkbox"></label>
+          <label class="toggle-row"><span>Show bus factor warning</span><input id="toggle-bus-factor" type="checkbox"></label>
+          <label class="toggle-row"><span>Show license risk warning</span><input id="toggle-license-risk" type="checkbox"></label>
+          <label class="toggle-row"><span>Show README table of contents</span><input id="toggle-readme-toc" type="checkbox"></label>
+          <label class="toggle-row"><span>Show folder sizes in file tree</span><input id="toggle-folder-sizes" type="checkbox"></label>
+          <label class="toggle-row"><span>Show PR complexity score</span><input id="toggle-pr-complexity" type="checkbox"></label>
+          <label class="toggle-row"><span>Show TODO highlights in files</span><input id="toggle-todo" type="checkbox"></label>
+          <label class="toggle-row"><span>Show contribution insights</span><input id="toggle-insights" type="checkbox"></label>
+          <label class="toggle-row"><span>Show issue age indicators</span><input id="toggle-issue-age" type="checkbox"></label>
+          <label class="toggle-row"><span>Show file type icons</span><input id="toggle-file-icons" type="checkbox"></label>
+          <label class="toggle-row"><span>Show quick clone button</span><input id="toggle-quick-clone" type="checkbox"></label>
+          <label class="toggle-row"><span>Show star history sparkline</span><input id="toggle-star-history" type="checkbox"></label>
+          <label class="toggle-row"><span>Show commit quality indicators</span><input id="toggle-commit-quality" type="checkbox"></label>
+          <label class="toggle-row"><span>Show file download buttons</span><input id="toggle-file-download" type="checkbox"></label>
+          <label class="toggle-row"><span>Show folder ZIP download</span><input id="toggle-folder-zip" type="checkbox"></label>
+          <label class="toggle-row"><span>Show open in IDE button</span><input id="toggle-open-ide" type="checkbox"></label>
+          <label class="toggle-row"><span>Show lines of code</span><input id="toggle-loc" type="checkbox"></label>
+        </div>
+
+        <div class="field-block">
+          <label class="field-label" for="preferred-online-ide">Preferred online IDE</label>
+          <select id="preferred-online-ide" class="text-input">
+            <option value="github-dev">GitHub Dev</option>
+            <option value="vscode-dev">VS Code Dev</option>
+            <option value="codesandbox">CodeSandbox</option>
+            <option value="stackblitz">StackBlitz</option>
+            <option value="gitpod">Gitpod</option>
+            <option value="replit">Replit</option>
+          </select>
+        </div>
+
+        <div class="field-block">
+          <label class="field-label" for="default-editor">Default editor</label>
+          <select id="default-editor" class="text-input">
+            <option value="vscode">VS Code</option>
+            <option value="vscode-insiders">VS Code Insiders</option>
+            <option value="cursor">Cursor</option>
+            <option value="windsurf">Windsurf</option>
+          </select>
+        </div>
+
+        <div class="field-block">
+          <label class="field-label" for="github-token">GitHub Personal Access Token</label>
+          <input id="github-token" class="text-input" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+        </div>
+
+        <div class="button-stack">
+          <button id="save-token" class="btn btn-primary" type="button">Save Settings</button>
+          <button id="clear-cache" class="btn" type="button">Clear all cached data</button>
+          <button id="export-data" class="btn" type="button">Export all data as JSON</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="popup-footer">
+      <div id="rate-limit-status"></div>
+      <div id="rate-limit-prompt"></div>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
