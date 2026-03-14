@@ -75,17 +75,6 @@ function bindActions() {
     });
   });
 
-  document.getElementById('save-abs-settings')?.addEventListener('click', async () => {
-    const timeFormat = document.querySelector('input[name="abs-time-format"]:checked')?.value || '24h';
-    const dateFormat = (document.getElementById('abs-date-format')?.value || '').trim();
-    const colorCode = document.getElementById('toggle-abs-color')?.checked !== false;
-    await chrome.storage.local.set({
-      gh_abs_time_format: timeFormat,
-      gh_abs_date_format: dateFormat,
-      gh_abs_color_code: colorCode
-    });
-  });
-
   document.getElementById('clear-cache')?.addEventListener('click', async () => {
     await sendMessage({ type: 'CLEAR_CACHED_DATA' });
     await loadPopup();
@@ -295,13 +284,6 @@ async function loadSettings() {
 
   const tokenInput = document.getElementById('github-token');
   if (tokenInput) tokenInput.value = data.github_pat || '';
-
-  const absTimeSettings = await chrome.storage.local.get(['gh_abs_time_format', 'gh_abs_date_format', 'gh_abs_color_code']);
-  const absTimeRadio = document.querySelector(`input[name="abs-time-format"][value="${absTimeSettings.gh_abs_time_format || '24h'}"]`);
-  if (absTimeRadio) absTimeRadio.checked = true;
-  const absDateInput = document.getElementById('abs-date-format');
-  if (absDateInput) absDateInput.value = absTimeSettings.gh_abs_date_format || '';
-  setCheckbox('toggle-abs-color', absTimeSettings.gh_abs_color_code !== false);
 }
 
 async function saveSettings() {
