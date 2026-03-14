@@ -3,101 +3,95 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GitHub Repository Health</title>
+  <title>GH Health Settings</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="popup-shell">
+
+    <!-- Header -->
     <header class="popup-header">
-      <img src="icons/icon48.png" alt="" class="popup-logo" width="18" height="18">
-      <span class="popup-title">GitHub Repository Health</span>
+      <img src="icons/icon48.png" alt="" class="popup-logo" width="22" height="22">
+      <span class="popup-title">GH Health</span>
+      <span class="popup-version">v2.0</span>
     </header>
 
-    <nav class="tab-bar" aria-label="Popup sections">
-      <button class="tab-button is-active" data-tab="overview" type="button">Overview</button>
-      <button class="tab-button" data-tab="watchlist" type="button">Watchlist</button>
-      <button class="tab-button" data-tab="compare" type="button">Compare</button>
-      <button class="tab-button" data-tab="saved" type="button" title="Saved">Saved</button>
-      <button class="tab-button" data-tab="notifs" type="button" title="Notifications">Notifs</button>
-      <button class="tab-button" data-tab="settings" type="button">Settings</button>
-    </nav>
+    <!-- Token Section -->
+    <section class="popup-section">
+      <div class="section-head">
+        <span class="section-label">GitHub Token</span>
+        <span class="section-hint">Required for 5,000 req/hr</span>
+      </div>
+      <div class="token-row">
+        <input id="github-token" class="text-input token-input" type="password"
+          placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+        <button id="save-token" class="btn btn-accent" type="button">Save</button>
+      </div>
+      <div class="token-status" id="token-status">
+        <span class="status-dot status-dot--grey"></span>
+        <span class="status-text">Not set</span>
+      </div>
+    </section>
 
-    <main class="popup-main">
-      <section class="tab-panel is-active" id="tab-overview">
-        <div id="overview-content" class="panel-stack"></div>
-      </section>
+    <!-- Features Section -->
+    <section class="popup-section">
+      <div class="section-head"><span class="section-label">Features</span></div>
 
-      <section class="tab-panel" id="tab-watchlist">
-        <div id="watchlist-alert"></div>
-        <div id="watchlist-content" class="panel-stack"></div>
-      </section>
-
-      <section class="tab-panel" id="tab-compare">
-        <div class="compare-form">
-          <input id="compare-left" class="text-input" type="text" placeholder="owner/repo  e.g. facebook/react" spellcheck="false" autocomplete="off">
-          <input id="compare-right" class="text-input" type="text" placeholder="owner/repo  e.g. vuejs/vue" spellcheck="false" autocomplete="off">
-          <button id="compare-button" class="btn btn-primary" type="button">Compare</button>
+      <!-- Group A -->
+      <div class="feature-group">
+        <div class="group-label">On-page Enhancements</div>
+        <div class="toggle-grid">
+          <label class="toggle-row"><span class="toggle-text">README TOC</span><input id="toggle-readme-toc" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">PR complexity</span><input id="toggle-pr-complexity" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">TODO highlights</span><input id="toggle-todo" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">Issue age</span><input id="toggle-issue-age" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">File type icons</span><input id="toggle-file-icons" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">Quick clone</span><input id="toggle-quick-clone" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">Star history</span><input id="toggle-star-history" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">Commit quality</span><input id="toggle-commit-quality" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">File sizes &amp; download</span><input id="toggle-file-enhancements" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">Absolute dates</span><input id="toggle-abs-dates" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">Markdown printer</span><input id="toggle-md-printer" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
         </div>
-        <div id="compare-results" class="panel-stack compare-results"></div>
-      </section>
+      </div>
 
-      <section class="tab-panel" id="tab-saved">
-        <div class="bookmark-controls">
-          <input id="bookmark-search" class="text-input" type="text" placeholder="Search repos or tags" spellcheck="false" autocomplete="off">
-          <div id="bookmark-tags" class="bookmark-tags"></div>
+      <!-- Group B -->
+      <div class="feature-group">
+        <div class="group-label">Sidebar Panels</div>
+        <div class="toggle-grid">
+          <label class="toggle-row"><span class="toggle-text">Contribution insights</span><input id="toggle-insights" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">LOC in sidebar</span><input id="toggle-loc-sidebar" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">Health sidebar panel</span><input id="toggle-health-sidebar" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">VS Code icons</span><input id="toggle-vsicons" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">Web IDE button</span><input id="toggle-webide" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
         </div>
-        <div id="bookmarks-content" class="panel-stack"></div>
-      </section>
+      </div>
 
-      <section class="tab-panel" id="tab-notifs">
-        <div class="button-stack">
-          <button id="notifications-refresh" class="btn" type="button">Refresh</button>
-          <button id="notifications-mark-all" class="btn btn-primary" type="button">Mark all read</button>
+      <!-- Group C -->
+      <div class="feature-group">
+        <div class="group-label">Filtering</div>
+        <div class="toggle-grid">
+          <label class="toggle-row"><span class="toggle-text">Search results</span><input id="toggle-search" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">Trending page</span><input id="toggle-trending" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">Dep risk section</span><input id="toggle-deps" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">Bus factor warning</span><input id="toggle-bus-factor" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
+          <label class="toggle-row"><span class="toggle-text">License risk warning</span><input id="toggle-license-risk" type="checkbox" class="sr-only"><span class="toggle-switch"></span></label>
         </div>
-        <div id="notifications-content" class="panel-stack"></div>
-      </section>
+      </div>
+    </section>
 
-      <section class="tab-panel" id="tab-settings">
-        <div class="settings-list">
-          <label class="toggle-row"><span>Show badges on search results</span><input id="toggle-search" type="checkbox"></label>
-          <label class="toggle-row"><span>Show badges on trending page</span><input id="toggle-trending" type="checkbox"></label>
-          <label class="toggle-row"><span>Show dependency risk section</span><input id="toggle-deps" type="checkbox"></label>
-          <label class="toggle-row"><span>Show bus factor warning</span><input id="toggle-bus-factor" type="checkbox"></label>
-          <label class="toggle-row"><span>Show license risk warning</span><input id="toggle-license-risk" type="checkbox"></label>
-          <label class="toggle-row"><span>Show README table of contents</span><input id="toggle-readme-toc" type="checkbox"></label>
-          <label class="toggle-row"><span>Show PR complexity score</span><input id="toggle-pr-complexity" type="checkbox"></label>
-          <label class="toggle-row"><span>Show TODO highlights in files</span><input id="toggle-todo" type="checkbox"></label>
-          <label class="toggle-row"><span>Show contribution insights</span><input id="toggle-insights" type="checkbox"></label>
-          <label class="toggle-row"><span>Show issue age indicators</span><input id="toggle-issue-age" type="checkbox"></label>
-          <label class="toggle-row"><span>Show file type icons</span><input id="toggle-file-icons" type="checkbox"></label>
-          <label class="toggle-row"><span>Show quick clone button</span><input id="toggle-quick-clone" type="checkbox"></label>
-          <label class="toggle-row"><span>Show star history sparkline</span><input id="toggle-star-history" type="checkbox"></label>
-          <label class="toggle-row"><span>Show commit quality indicators</span><input id="toggle-commit-quality" type="checkbox"></label>
-          <label class="toggle-row"><span>Show file sizes, download &amp; copy</span><input id="toggle-file-enhancements" type="checkbox"></label>
-          <label class="toggle-row"><span>Print GitHub markdown as rendered</span><input id="toggle-md-printer" type="checkbox"></label>
-          <label class="toggle-row"><span>VS Code style file icons</span><input id="toggle-vsicons" type="checkbox"></label>
-          <label class="toggle-row"><span>Open in Web IDE button</span><input id="toggle-webide" type="checkbox"></label>
-          <label class="toggle-row"><span>Lines of code in sidebar</span><input id="toggle-loc-sidebar" type="checkbox"></label>
-          <label class="toggle-row"><span>Show absolute dates</span><input id="toggle-abs-dates" type="checkbox"></label>
-          <label class="toggle-row"><span>Health score panel in sidebar</span><input id="toggle-health-sidebar" type="checkbox"></label>
-        </div>
+    <!-- Danger Zone -->
+    <section class="popup-section popup-section--danger">
+      <div class="section-head"><span class="section-label">Danger Zone</span></div>
+      <div class="danger-actions">
+        <button id="clear-cache" class="btn btn-danger" type="button">Clear cached data</button>
+        <button id="export-data" class="btn btn-outline" type="button">Export data as JSON</button>
+      </div>
+    </section>
 
-        <div class="field-block">
-          <label class="field-label" for="github-token">GitHub Personal Access Token</label>
-          <input id="github-token" class="text-input" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
-        </div>
-
-        <div class="button-stack">
-          <button id="save-token" class="btn btn-primary" type="button">Save Settings</button>
-          <button id="clear-cache" class="btn" type="button">Clear all cached data</button>
-          <button id="export-data" class="btn" type="button">Export all data as JSON</button>
-        </div>
-      </section>
-    </main>
-
+    <!-- Footer -->
     <footer class="popup-footer">
       <div id="rate-limit-status"></div>
-      <div id="rate-limit-prompt"></div>
     </footer>
   </div>
 
