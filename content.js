@@ -2517,90 +2517,65 @@ async function injectLOCInSidebar(owner, repo) {
 
 let absDateObserver = null;
 
-async function injectAbsoluteDates() {
-  if (document.body.hasAttribute('data-abs-dates-done')) return;
-  document.body.setAttribute('data-abs-dates-done', 'true');
+function formatAbsoluteDate(dateString) {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return null;
 
-  const stored = await new Promise((resolve) => {
-    chrome.storage.local.get(['gh_abs_time_format', 'gh_abs_date_format', 'gh_abs_color_code'], resolve);
-  });
-  const timeFormat = stored.gh_abs_time_format || '24h';
-  const dateFormat = stored.gh_abs_date_format || '';
-  const colorCode = stored.gh_abs_color_code !== false;
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yy = String(date.getFullYear()).slice(-2);
+  const hh = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
 
-  function formatAbsDate(isoString) {
-    const d = new Date(isoString);
-    if (isNaN(d.getTime())) return null;
+  return `${dd}/${mm}/${yy}, ${hh}:${min}`;
+}
 
-    let datePart;
-    if (dateFormat) {
-      datePart = dateFormat
-        .replace('YYYY', String(d.getFullYear()))
-        .replace('YY', String(d.getFullYear()).slice(-2))
-        .replace('MM', String(d.getMonth() + 1).padStart(2, '0'))
-        .replace('DD', String(d.getDate()).padStart(2, '0'));
-    } else {
-      datePart = d.toLocaleDateString(undefined, { year: '2-digit', month: '2-digit', day: '2-digit' });
-    }
+function convertAllTimestamps() {
+  const selectors = [
+    'relative-time[datetime]',
+    'time-ago[datetime]',
+    'local-time[datetime]'
+  ];
 
-    let timePart;
-    if (timeFormat === '12h') {
-      timePart = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
-    } else if (timeFormat === '24h') {
-      timePart = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
-    } else {
-      timePart = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-    }
+  selectors.forEach(function (selector) {
+    document.querySelectorAll(selector).forEach(function (el) {
+      if (el.hasAttribute('data-abs-converted')) return;
 
-    return `${datePart} ${timePart}`;
-  }
+      const datetime = el.getAttribute('datetime');
+      if (!datetime) return;
 
-  function hashDateColor(dateStr) {
-    let hash = 0;
-    for (let i = 0; i < dateStr.length; i++) {
-      hash = dateStr.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const hue = Math.abs(hash) % 360;
-    return `hsl(${hue}, 55%, 55%)`;
-  }
-
-  function processTimeElements(root) {
-    const elements = (root || document).querySelectorAll('relative-time[datetime], time-ago[datetime]');
-    elements.forEach((el) => {
-      if (el.hasAttribute('data-abs-processed')) return;
-      el.setAttribute('data-abs-processed', 'true');
-      const dt = el.getAttribute('datetime');
-      if (!dt) return;
-      const formatted = formatAbsDate(dt);
+      const formatted = formatAbsoluteDate(datetime);
       if (!formatted) return;
-      el.textContent = formatted;
-      el.setAttribute('title', new Date(dt).toLocaleString());
-      if (colorCode) {
-        const dayStr = dt.slice(0, 10);
-        el.style.color = hashDateColor(dayStr);
-        el.style.fontWeight = '500';
-      }
-    });
-  }
 
-  processTimeElements(document);
+      el.setAttribute('data-abs-converted', 'true');
 
-  if (!absDateObserver) {
-    absDateObserver = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const node of mutation.addedNodes) {
-          if (node.nodeType === 1) {
-            if (node.matches && node.matches('relative-time[datetime], time-ago[datetime]')) {
-              processTimeElements(node.parentNode);
-            } else if (node.querySelectorAll) {
-              processTimeElements(node);
-            }
-          }
-        }
-      }
+      const span = document.createElement('span');
+      span.className = 'gh-abs-date-span';
+      span.textContent = formatted;
+      span.setAttribute('title', el.getAttribute('title') || datetime);
+
+      el.insertAdjacentElement('afterend', span);
+      el.setAttribute('data-abs-hidden', 'true');
     });
-    absDateObserver.observe(document.documentElement, { childList: true, subtree: true });
-  }
+  });
+}
+
+function startAbsDateObserver() {
+  if (absDateObserver) return;
+
+  absDateObserver = new MutationObserver(function () {
+    convertAllTimestamps();
+  });
+
+  absDateObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+}
+
+async function injectAbsoluteDates() {
+  convertAllTimestamps();
+  startAbsDateObserver();
 }
 
 // â”€â”€ FEATURE 5: Health Score Sidebar Panel â”€â”€
