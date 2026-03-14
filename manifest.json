@@ -27,8 +27,8 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["markdown-printer-style.css"],
-      "matches": ["https://*.github.com/*"]
+      "resources": ["markdown-printer-style.css", "icons/file-icons/*"],
+      "matches": ["https://github.com/*"]
     }
   ],
   "action": {
