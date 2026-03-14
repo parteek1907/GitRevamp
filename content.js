@@ -31,6 +31,11 @@ if (typeof initSidebar === 'function') {
   initSidebar();
 }
 
+function isExpectedRuntimeError(error) {
+  const msg = error instanceof Error ? error.message : String(error || '');
+  return msg.includes('Extension context invalidated') || msg.includes('Receiving end does not exist');
+}
+
 bootstrap().catch((error) => {
   if (!isExpectedRuntimeError(error)) {
     console.error('[GH Health]', error.message);
