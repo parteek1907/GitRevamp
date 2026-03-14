@@ -82,26 +82,6 @@
           <label class="toggle-row"><span>Health score panel in sidebar</span><input id="toggle-health-sidebar" type="checkbox"></label>
         </div>
 
-        <div class="settings-section-header">Absolute Timestamps</div>
-        <div class="field-block">
-          <label class="field-label">Time Format</label>
-          <div class="radio-group">
-            <label><input type="radio" name="abs-time-format" value="12h"> 12-hour (4:25 PM)</label>
-            <label><input type="radio" name="abs-time-format" value="24h" checked> 24-hour (16:25)</label>
-            <label><input type="radio" name="abs-time-format" value="auto"> Auto (locale)</label>
-          </div>
-        </div>
-        <div class="field-block">
-          <label class="field-label" for="abs-date-format">Date Format</label>
-          <input id="abs-date-format" class="text-input" type="text" placeholder="YY.MM.DD">
-          <div class="field-hint">Leave empty for locale default. Use YY, MM, DD. E.g. MM/DD/YY</div>
-        </div>
-        <label class="toggle-row">
-          <span>Color-code timestamps by day</span>
-          <input id="toggle-abs-color" type="checkbox" checked>
-        </label>
-        <button id="save-abs-settings" class="btn btn-sm btn-primary" type="button">Save timestamp settings</button>
-
         <div class="field-block">
           <label class="field-label" for="github-token">GitHub Personal Access Token</label>
           <input id="github-token" class="text-input" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
