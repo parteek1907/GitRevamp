@@ -2483,34 +2483,532 @@ async function injectOpenInWebIDE(owner, repo) {
 
 // â”€â”€ FEATURE 3: Lines of Code in Sidebar â”€â”€
 
-async function injectLOCInSidebar(owner, repo) {
-  if (!/^\/[^/]+\/[^/]+\/?$/.test(location.pathname)) return;
+var LOC_LANGUAGE_COLORS = {
+  'JavaScript': '#f7df1e',
+  'TypeScript': '#3178c6',
+  'Python': '#3572a5',
+  'Rust': '#dea584',
+  'Go': '#00add8',
+  'Java': '#b07219',
+  'C': '#555555',
+  'C++': '#f34b7d',
+  'C#': '#178600',
+  'Ruby': '#701516',
+  'PHP': '#4f5d95',
+  'Swift': '#f05138',
+  'Kotlin': '#a97bff',
+  'HTML': '#e34c26',
+  'CSS': '#563d7c',
+  'Shell': '#89e051',
+  'Vue': '#41b883',
+  'Svelte': '#ff3e00',
+  'Markdown': '#083fa1',
+  'YAML': '#cb171e',
+  'JSON': '#292929'
+};
 
-  const sidebar = document.querySelector('.Layout-sidebar, [data-testid="repository-about"]')?.closest('.Layout-sidebar') ||
-                  document.querySelector('.repository-content .Layout-sidebar');
+var LOC_EXT_TO_LANG = {
+  '.rs': 'Rust', '.js': 'JavaScript', '.mjs': 'JavaScript', '.cjs': 'JavaScript',
+  '.ts': 'TypeScript', '.mts': 'TypeScript', '.py': 'Python', '.go': 'Go',
+  '.java': 'Java', '.c': 'C', '.h': 'C', '.cpp': 'C++', '.cc': 'C++',
+  '.cxx': 'C++', '.hpp': 'C++', '.cs': 'C#', '.rb': 'Ruby', '.php': 'PHP',
+  '.swift': 'Swift', '.kt': 'Kotlin', '.kts': 'Kotlin', '.html': 'HTML',
+  '.htm': 'HTML', '.css': 'CSS', '.sh': 'Shell', '.bash': 'Shell',
+  '.vue': 'Vue', '.svelte': 'Svelte', '.md': 'Markdown', '.mdx': 'Markdown',
+  '.yaml': 'YAML', '.yml': 'YAML', '.json': 'JSON'
+};
+
+function getLanguageColor(name) {
+  if (LOC_LANGUAGE_COLORS[name]) return LOC_LANGUAGE_COLORS[name];
+  var langName = LOC_EXT_TO_LANG[name] || LOC_EXT_TO_LANG['.' + name.replace(/^\./, '')];
+  if (langName && LOC_LANGUAGE_COLORS[langName]) return LOC_LANGUAGE_COLORS[langName];
+  return '#8b949e';
+}
+
+var locModalData = null;
+
+async function injectLOCInSidebar(owner, repo) {
+  if (!/^\/[^/]+\/[^/]+\/?$/.test(location.pathname)) {
+    console.log('[GH-LOC] skipped: not a repo root page', location.pathname);
+    return;
+  }
+
+  // Find the About/sidebar section using multiple strategies
+  var sidebar = document.querySelector('.Layout-sidebar') ||
+                document.querySelector('[data-testid="repo-sidebar"]') ||
+                document.querySelector('aside[aria-label]');
+
+  // If no sidebar found, look for the About heading or forks/stars links and walk up
+  if (!sidebar) {
+    var aboutHeading = document.querySelector('h2.h4.mb-3');
+    if (!aboutHeading) {
+      // Try finding any heading that says "About"
+      var allH2 = document.querySelectorAll('h2');
+      for (var i = 0; i < allH2.length; i++) {
+        if (allH2[i].textContent.trim() === 'About') {
+          aboutHeading = allH2[i];
+          break;
+        }
+      }
+    }
+    if (aboutHeading) {
+      sidebar = aboutHeading.closest('div.Layout-sidebar, aside, [class*="sidebar"], [class*="Sidebar"]') ||
+                aboutHeading.parentElement;
+    }
+  }
+
+  // Try finding sidebar from stars/forks links
+  if (!sidebar) {
+    var statLink = document.querySelector('a[href$="/stargazers"]') ||
+                   document.querySelector('a[href$="/forks"]') ||
+                   document.querySelector('a[href$="/watchers"]');
+    if (statLink) {
+      sidebar = statLink.closest('div.Layout-sidebar, aside, [class*="sidebar"], [class*="Sidebar"]') ||
+                statLink.parentElement?.parentElement?.parentElement;
+    }
+  }
+
+  console.log('[GH-LOC] sidebar found:', !!sidebar, sidebar?.tagName, sidebar?.className?.substring(0, 80));
+
   if (!sidebar || sidebar.hasAttribute('data-loc-sidebar-done')) return;
   sidebar.setAttribute('data-loc-sidebar-done', 'true');
 
-  const response = await sendMessage({ type: 'GET_LOC', payload: { owner, repo } }).catch(() => null);
-  const total = response?.data?.total;
-  if (!total) return;
-
-  const locRow = document.createElement('div');
-  locRow.className = 'gh-loc-stat-row';
+  // Create the LOC item as a list item to match stars/watching/forks format
+  var locRow = document.createElement('li');
+  locRow.className = 'gh-loc-stat-row d-inline';
+  locRow.style.cursor = 'pointer';
   locRow.innerHTML =
-    '<svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16" class="octicon" style="color:var(--color-fg-muted)">' +
+    '<a class="Link Link--muted" style="cursor:pointer">' +
+    '<svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16" class="octicon mr-1" style="vertical-align:text-bottom">' +
     '<path d="m11.28 3.22 4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L13.94 8l-3.72-3.72a.749.749 0 0 1 .326-1.275.749.749 0 0 1 .734.215Zm-6.56 0a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L2.06 8l3.72 3.72a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L.44 8.53a.75.75 0 0 1 0-1.06Z"/>' +
     '</svg>' +
-    '<span class="gh-loc-stat-number">' + total.toLocaleString() + '</span>' +
-    '<span class="gh-loc-stat-label">lines of code</span>';
+    '<span class="gh-loc-stat-number">...</span> lines of code' +
+    '</a>';
 
-  const forksRow = document.querySelector('a[href$="/forks"]')?.closest('[class*="BorderGrid-row"], .d-flex, li') ||
-                   document.querySelector('[href$="/network/members"]')?.closest('div, li');
-  if (forksRow) {
-    forksRow.insertAdjacentElement('afterend', locRow);
-  } else if (sidebar) {
-    sidebar.appendChild(locRow);
+  // Find the stats UL (contains stars/watching/forks)
+  var forkLink = sidebar.querySelector('a[href$="/forks"]') ||
+                 sidebar.querySelector('a[href$="/network/members"]') ||
+                 document.querySelector('a[href$="/forks"]');
+  var statsUl = null;
+
+  console.log('[GH-LOC] forkLink found:', !!forkLink, forkLink?.href);
+
+  if (forkLink) {
+    // Walk up to find the UL that contains the stats
+    statsUl = forkLink.closest('ul');
+    if (!statsUl) {
+      // Maybe it's in an li, go up further
+      var li = forkLink.closest('li');
+      if (li) statsUl = li.parentElement;
+    }
+    console.log('[GH-LOC] statsUl from forkLink:', !!statsUl, statsUl?.tagName, statsUl?.className?.substring(0, 80));
   }
+
+  if (!statsUl) {
+    var starLink = sidebar.querySelector('a[href$="/stargazers"]') ||
+                   document.querySelector('a[href$="/stargazers"]');
+    if (starLink) {
+      statsUl = starLink.closest('ul');
+      if (!statsUl) {
+        var li2 = starLink.closest('li');
+        if (li2) statsUl = li2.parentElement;
+      }
+    }
+  }
+
+  if (statsUl && statsUl.tagName === 'UL') {
+    statsUl.appendChild(locRow);
+    console.log('[GH-LOC] appended to stats UL:', statsUl.className?.substring(0, 80));
+  } else {
+    // Fallback: try inserting after the forks link parent
+    var fallbackParent = forkLink ? (forkLink.closest('.d-flex') || forkLink.parentElement?.parentElement) : null;
+    if (fallbackParent) {
+      fallbackParent.insertAdjacentElement('afterend', locRow);
+      console.log('[GH-LOC] inserted after fallback parent');
+    } else {
+      sidebar.appendChild(locRow);
+      console.log('[GH-LOC] appended to sidebar');
+    }
+  }
+
+  locRow.addEventListener('click', function () {
+    openLOCModal(owner, repo, locModalData);
+  });
+
+  var response = await sendMessage({ type: 'GET_LOC_FULL', payload: { owner: owner, repo: repo } }).catch(function (err) { console.log('[GH-LOC] API error:', err); return null; });
+  var data = response && response.data;
+  console.log('[GH-LOC] API response:', !!data, data ? data.total : 'no data');
+
+  var numSpan = locRow.querySelector('.gh-loc-stat-number');
+  if (!data || !data.total) {
+    console.log('[GH-LOC] no LOC data available');
+    numSpan.textContent = 'N/A';
+  } else {
+    locModalData = data;
+    numSpan.textContent = data.total.toLocaleString();
+  }
+}
+
+function openLOCModal(owner, repo, data) {
+  var existing = document.getElementById('gh-loc-modal-backdrop');
+  if (existing) {
+    existing.style.display = 'flex';
+    if (data) {
+      populateLOCModal(existing.querySelector('.gh-loc-modal'), owner, repo, data);
+    }
+    return;
+  }
+
+  var backdrop = document.createElement('div');
+  backdrop.id = 'gh-loc-modal-backdrop';
+  backdrop.className = 'gh-loc-modal-backdrop';
+
+  var modal = document.createElement('div');
+  modal.className = 'gh-loc-modal';
+  modal.id = 'gh-loc-modal';
+
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+
+  backdrop.addEventListener('click', function (e) {
+    if (e.target === backdrop) {
+      backdrop.style.display = 'none';
+    }
+  });
+
+  function onKeyDown(e) {
+    if (e.key === 'Escape' && backdrop.style.display !== 'none') {
+      backdrop.style.display = 'none';
+    }
+  }
+  document.addEventListener('keydown', onKeyDown);
+
+  if (data) {
+    populateLOCModal(modal, owner, repo, data);
+  } else {
+    modal.innerHTML = '';
+    var header = buildLOCModalHeader(owner, repo, backdrop);
+    modal.appendChild(header);
+    var loading = document.createElement('div');
+    loading.className = 'gh-loc-loading';
+    loading.innerHTML = '<div class="gh-loc-spinner"></div><span>Loading lines of code\u2026</span>';
+    modal.appendChild(loading);
+
+    sendMessage({ type: 'GET_LOC_FULL', payload: { owner: owner, repo: repo } }).then(function (response) {
+      var d = response && response.data;
+      if (d) {
+        locModalData = d;
+        populateLOCModal(modal, owner, repo, d);
+      } else {
+        loading.innerHTML = '<span>Failed to load data.</span>';
+      }
+    }).catch(function () {
+      loading.innerHTML = '<span>Failed to load data.</span>';
+    });
+  }
+
+  modal.focus();
+}
+
+function buildLOCModalHeader(owner, repo, backdrop) {
+  var header = document.createElement('div');
+  header.className = 'gh-loc-modal-header';
+
+  var title = document.createElement('span');
+  title.className = 'gh-loc-modal-title';
+  title.textContent = 'Lines of Code \u2014 ' + owner + '/' + repo;
+
+  var closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'gh-loc-modal-close';
+  closeBtn.textContent = '\u00D7';
+  closeBtn.addEventListener('click', function () {
+    backdrop.style.display = 'none';
+  });
+
+  header.appendChild(title);
+  header.appendChild(closeBtn);
+  return header;
+}
+
+function populateLOCModal(modal, owner, repo, data) {
+  modal.innerHTML = '';
+
+  var backdrop = modal.closest('.gh-loc-modal-backdrop');
+
+  modal.appendChild(buildLOCModalHeader(owner, repo, backdrop));
+
+  var folderChecked = {};
+  var langChecked = {};
+
+  (data.folders || []).forEach(function (f) { folderChecked[f.name] = true; });
+  (data.languages || []).forEach(function (l) { langChecked[l.language] = true; });
+
+  var totalSection = document.createElement('div');
+  totalSection.className = 'gh-loc-modal-total';
+
+  var totalNumber = document.createElement('div');
+  totalNumber.className = 'gh-loc-total-number';
+  totalNumber.textContent = (data.total || 0).toLocaleString();
+
+  var totalLabel = document.createElement('div');
+  totalLabel.className = 'gh-loc-total-label';
+  totalLabel.textContent = 'total lines of code';
+
+  var totalSub = document.createElement('div');
+  totalSub.className = 'gh-loc-total-sub';
+
+  var folderTotalSpan = document.createElement('span');
+  folderTotalSpan.textContent = computeFolderTotal(data.folders, folderChecked).toLocaleString() + ' lines across selected folders';
+
+  var langTotalSpan = document.createElement('span');
+  langTotalSpan.textContent = computeLangTotal(data.languages, langChecked).toLocaleString() + ' lines in selected languages';
+
+  totalSub.appendChild(folderTotalSpan);
+  totalSub.appendChild(langTotalSpan);
+
+  totalSection.appendChild(totalNumber);
+  totalSection.appendChild(totalLabel);
+  totalSection.appendChild(totalSub);
+  modal.appendChild(totalSection);
+
+  function updateTotals() {
+    var ft = computeFolderTotal(data.folders, folderChecked);
+    var lt = computeLangTotal(data.languages, langChecked);
+    folderTotalSpan.textContent = ft.toLocaleString() + ' lines across selected folders';
+    langTotalSpan.textContent = lt.toLocaleString() + ' lines in selected languages';
+    var estimated = Math.min(ft, lt);
+    totalNumber.textContent = '~' + estimated.toLocaleString();
+    totalLabel.textContent = 'lines (estimated)';
+  }
+
+  var body = document.createElement('div');
+  body.className = 'gh-loc-modal-body';
+
+  var folderCol = buildLOCColumn(data.folders || [], 'folder', folderChecked, updateTotals);
+  var langCol = buildLOCColumn(data.languages || [], 'language', langChecked, updateTotals);
+
+  body.appendChild(folderCol);
+  body.appendChild(langCol);
+  modal.appendChild(body);
+
+  var footer = document.createElement('div');
+  footer.className = 'gh-loc-modal-footer';
+
+  var footerText = document.createElement('span');
+  footerText.textContent = 'Data from GitHub Trees API and codetabs.com';
+
+  var recalcBtn = document.createElement('button');
+  recalcBtn.type = 'button';
+  recalcBtn.className = 'gh-loc-sort-btn';
+  recalcBtn.textContent = 'Recalculate';
+  recalcBtn.addEventListener('click', function () {
+    modal.innerHTML = '';
+    modal.appendChild(buildLOCModalHeader(owner, repo, backdrop));
+    var loading = document.createElement('div');
+    loading.className = 'gh-loc-loading';
+    loading.innerHTML = '<div class="gh-loc-spinner"></div><span>Recalculating\u2026</span>';
+    modal.appendChild(loading);
+
+    sendMessage({ type: 'GET_LOC_FULL', payload: { owner: owner, repo: repo, bypassCache: true } }).then(function (response) {
+      var d = response && response.data;
+      if (d) {
+        locModalData = d;
+        populateLOCModal(modal, owner, repo, d);
+      } else {
+        loading.innerHTML = '<span>Failed to load data.</span>';
+      }
+    }).catch(function () {
+      loading.innerHTML = '<span>Failed to load data.</span>';
+    });
+  });
+
+  footer.appendChild(footerText);
+  footer.appendChild(recalcBtn);
+  modal.appendChild(footer);
+}
+
+function computeFolderTotal(folders, checked) {
+  if (!folders || !folders.length) return 0;
+  return folders.reduce(function (sum, f) {
+    return sum + (checked[f.name] ? (f.estimatedLOC || 0) : 0);
+  }, 0);
+}
+
+function computeLangTotal(languages, checked) {
+  if (!languages || !languages.length) return 0;
+  return languages.reduce(function (sum, l) {
+    return sum + (checked[l.language] ? (l.linesOfCode || 0) : 0);
+  }, 0);
+}
+
+function buildLOCColumn(items, type, checkedMap, onUpdate) {
+  var col = document.createElement('div');
+  col.className = 'gh-loc-col';
+
+  var colHeader = document.createElement('div');
+  colHeader.className = 'gh-loc-col-header';
+  colHeader.textContent = type === 'folder' ? 'Folders' : 'Languages';
+  col.appendChild(colHeader);
+
+  var search = document.createElement('input');
+  search.type = 'text';
+  search.className = 'gh-loc-search';
+  search.placeholder = 'Filter ' + (type === 'folder' ? 'folders' : 'languages') + '\u2026';
+  col.appendChild(search);
+
+  var controls = document.createElement('div');
+  controls.className = 'gh-loc-col-controls';
+
+  var sortNameBtn = document.createElement('button');
+  sortNameBtn.type = 'button';
+  sortNameBtn.className = 'gh-loc-sort-btn';
+  sortNameBtn.textContent = 'Name';
+
+  var sortLocBtn = document.createElement('button');
+  sortLocBtn.type = 'button';
+  sortLocBtn.className = 'gh-loc-sort-btn is-active';
+  sortLocBtn.textContent = 'Lines';
+
+  var selectAllBtn = document.createElement('button');
+  selectAllBtn.type = 'button';
+  selectAllBtn.className = 'gh-loc-select-btn';
+  selectAllBtn.textContent = 'Select all';
+
+  var deselectAllBtn = document.createElement('button');
+  deselectAllBtn.type = 'button';
+  deselectAllBtn.className = 'gh-loc-select-btn';
+  deselectAllBtn.textContent = 'Deselect all';
+
+  controls.appendChild(sortNameBtn);
+  controls.appendChild(sortLocBtn);
+  controls.appendChild(selectAllBtn);
+  controls.appendChild(deselectAllBtn);
+  col.appendChild(controls);
+
+  var list = document.createElement('div');
+  list.className = 'gh-loc-list';
+  col.appendChild(list);
+
+  function getItemLoc(item) {
+    return type === 'folder' ? (item.estimatedLOC || 0) : (item.linesOfCode || 0);
+  }
+
+  function getItemName(item) {
+    return type === 'folder' ? item.name : item.language;
+  }
+
+  var currentSort = 'loc';
+  var maxLoc = items.length > 0 ? Math.max.apply(null, items.map(getItemLoc)) : 1;
+
+  function renderList() {
+    while (list.firstChild) list.removeChild(list.firstChild);
+
+    var query = search.value.trim().toLowerCase();
+    var filtered = items.filter(function (item) {
+      if (!query) return true;
+      return getItemName(item).toLowerCase().indexOf(query) !== -1;
+    });
+
+    var sorted = filtered.slice();
+    if (currentSort === 'name') {
+      sorted.sort(function (a, b) { return getItemName(a).localeCompare(getItemName(b)); });
+    } else {
+      sorted.sort(function (a, b) { return getItemLoc(b) - getItemLoc(a); });
+    }
+
+    sorted.forEach(function (item) {
+      var name = getItemName(item);
+      var loc = getItemLoc(item);
+      var pct = item.percentage || 0;
+      var color = type === 'folder' ? '#2f81f7' : getLanguageColor(name);
+      var barWidth = maxLoc > 0 ? Math.max(1, (loc / maxLoc) * 100) : 0;
+
+      var row = document.createElement('div');
+      row.className = 'gh-loc-row';
+
+      var top = document.createElement('div');
+      top.className = 'gh-loc-row-top';
+
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'gh-loc-row-check';
+      checkbox.checked = checkedMap[name] !== false;
+      checkbox.addEventListener('change', function () {
+        checkedMap[name] = checkbox.checked;
+        onUpdate();
+      });
+
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'gh-loc-row-name';
+      nameSpan.textContent = name;
+
+      var countSpan = document.createElement('span');
+      countSpan.className = 'gh-loc-row-count';
+      countSpan.textContent = loc.toLocaleString();
+
+      var pctSpan = document.createElement('span');
+      pctSpan.className = 'gh-loc-row-pct';
+      pctSpan.textContent = pct.toFixed(1) + '%';
+
+      top.appendChild(checkbox);
+      top.appendChild(nameSpan);
+      top.appendChild(countSpan);
+      top.appendChild(pctSpan);
+
+      var barTrack = document.createElement('div');
+      barTrack.className = 'gh-loc-bar-track';
+
+      var barFill = document.createElement('div');
+      barFill.className = 'gh-loc-bar-fill';
+      barFill.style.width = barWidth + '%';
+      barFill.style.background = color;
+      barTrack.appendChild(barFill);
+
+      row.appendChild(top);
+      row.appendChild(barTrack);
+      list.appendChild(row);
+    });
+
+    if (sorted.length === 0) {
+      var empty = document.createElement('div');
+      empty.className = 'gh-loc-loading';
+      empty.style.padding = '12px';
+      empty.textContent = items.length === 0 ? 'No data available' : 'No matches';
+      list.appendChild(empty);
+    }
+  }
+
+  search.addEventListener('input', renderList);
+
+  sortNameBtn.addEventListener('click', function () {
+    currentSort = 'name';
+    sortNameBtn.classList.add('is-active');
+    sortLocBtn.classList.remove('is-active');
+    renderList();
+  });
+
+  sortLocBtn.addEventListener('click', function () {
+    currentSort = 'loc';
+    sortLocBtn.classList.add('is-active');
+    sortNameBtn.classList.remove('is-active');
+    renderList();
+  });
+
+  selectAllBtn.addEventListener('click', function () {
+    items.forEach(function (item) { checkedMap[getItemName(item)] = true; });
+    renderList();
+    onUpdate();
+  });
+
+  deselectAllBtn.addEventListener('click', function () {
+    items.forEach(function (item) { checkedMap[getItemName(item)] = false; });
+    renderList();
+    onUpdate();
+  });
+
+  renderList();
+  return col;
 }
 
 // â”€â”€ FEATURE 4: Absolute Dates â”€â”€
