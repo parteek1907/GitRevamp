@@ -350,6 +350,19 @@
   text-transform: capitalize;
 }
 
+.gh-filetype-badge {
+  font-size: 9px;
+  font-weight: 700;
+  width: 24px;
+  height: 16px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
 .gh-quick-clone-wrap {
   position: relative;
   display: inline-flex;
