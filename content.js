@@ -82,6 +82,19 @@ async function bootstrap() {
   startObserver();
 }
 
+function startObserver() {
+  if (observer) return;
+  observer = new MutationObserver(() => {
+    const currentUrl = location.href;
+    if (currentUrl !== lastUrl) {
+      lastUrl = currentUrl;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => scanPage(), 300);
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
 function scanPage() {
   const path = window.location.pathname;
   const segments = path.split('/').filter(Boolean);
