@@ -11,60 +11,7 @@
     <link rel="stylesheet" href="onboarding.bundle.css" />
   </head>
   <body class="bg-background-dark text-slate-100 font-sans antialiased">
-    <!-- Animated background paths -->
-    <div id="bg-paths" aria-hidden="true">
-      <svg id="bg-svg-pos" class="bg-svg" viewBox="0 0 696 316" fill="none" preserveAspectRatio="xMidYMid slice"></svg>
-      <svg id="bg-svg-neg" class="bg-svg" viewBox="0 0 696 316" fill="none" preserveAspectRatio="xMidYMid slice"></svg>
-    </div>
-
     <div id="root"></div>
     <script type="module" src="onboarding.bundle.js"></script>
-
-    <script>
-    (function () {
-      function buildPaths(svgEl, position) {
-        for (var i = 0; i < 36; i++) {
-          var p = position;
-          var a = 380 - i * 5 * p;
-          var b = 189 + i * 6;
-          var c = 312 - i * 5 * p;
-          var e = 216 - i * 6;
-          var f = 152 - i * 5 * p;
-          var g = 343 - i * 6;
-          var h = 616 - i * 5 * p;
-          var j = 470 - i * 6;
-          var k = 684 - i * 5 * p;
-          var m = 875 - i * 6;
-          var d = 'M-' + a + ' -' + b +
-                  'C-' + a + ' -' + b + ' -' + c + ' ' + e + ' ' + f + ' ' + g +
-                  'C' + h + ' ' + j + ' ' + k + ' ' + m + ' ' + k + ' ' + m;
-          var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          path.setAttribute('d', d);
-          path.setAttribute('stroke', 'white');
-          path.setAttribute('stroke-width', String(0.5 + i * 0.03));
-          path.setAttribute('fill', 'none');
-          path.setAttribute('pathLength', '1');
-          path.style.strokeDasharray = '0.35 0.65';
-          path.style.strokeDashoffset = '0';
-          path.style.opacity = '0.3';
-
-          var dur = (20 + Math.random() * 10) * 1000;
-          var delay = -Math.random() * dur;
-          path.animate(
-            [
-              { strokeDashoffset: '0',    opacity: 0.3 },
-              { strokeDashoffset: '-0.5', opacity: 0.1 + i * 0.03 },
-              { strokeDashoffset: '-1',   opacity: 0.3 }
-            ],
-            { duration: dur, delay: delay, iterations: Infinity, easing: 'linear', fill: 'both' }
-          );
-          svgEl.appendChild(path);
-        }
-      }
-
-      buildPaths(document.getElementById('bg-svg-pos'),  1);
-      buildPaths(document.getElementById('bg-svg-neg'), -1);
-    })();
-    </script>
   </body>
 </html>

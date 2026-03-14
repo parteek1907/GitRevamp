@@ -2,27 +2,6 @@
    The visual design remains defined by Tailwind classes in onboarding.html. */
 body {
   font-family: 'Inter', sans-serif;
-  overflow: hidden;
-}
-
-#bg-paths {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.bg-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-#root {
-  position: relative;
-  z-index: 1;
 }
 
 .glass-card {
