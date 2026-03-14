@@ -170,6 +170,11 @@ async function routeMessage(message, sender) {
       const data = await getLocData(payload.owner, payload.repo);
       return { data };
     }
+    case 'GET_LOC_FULL': {
+      const payload = message.payload || {};
+      const data = await getLocFullData(payload.owner, payload.repo, Boolean(payload.bypassCache));
+      return { data };
+    }
     case 'GET_NOTIFICATIONS': {
       const data = await getGroupedNotifications();
       return { data };
@@ -878,6 +883,217 @@ async function getLocData(owner, repo) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function getLocFullData(owner, repo, bypassCache) {
+  const langCacheKey = `loc_${owner}_${repo}`;
+  const folderCacheKey = `loc_folders_${owner}_${repo}`;
+
+  let cachedLang = null;
+  let cachedFolders = null;
+
+  if (!bypassCache) {
+    cachedLang = await getCached(langCacheKey, CACHE_TTL_LOC);
+    cachedFolders = await getCached(folderCacheKey, CACHE_TTL_LOC);
+    if (cachedLang && cachedFolders) {
+      return {
+        languages: cachedLang.languages || [],
+        folders: cachedFolders.folders || [],
+        total: cachedLang.total || 0,
+        isEstimated: true
+      };
+    }
+  }
+
+  const [langResult, folderResult] = await Promise.allSettled([
+    fetchLanguageData(owner, repo),
+    fetchFolderData(owner, repo)
+  ]);
+
+  let languages = [];
+  let total = 0;
+  if (langResult.status === 'fulfilled' && langResult.value) {
+    languages = langResult.value.languages;
+    total = langResult.value.total;
+    await setCached(langCacheKey, { languages, total });
+  } else if (cachedLang) {
+    languages = cachedLang.languages || [];
+    total = cachedLang.total || 0;
+  }
+
+  let folders = [];
+  if (folderResult.status === 'fulfilled' && folderResult.value) {
+    const folderItems = folderResult.value;
+    const totalFileCount = folderItems.reduce(function (sum, f) { return sum + f.fileCount; }, 0);
+    folders = folderItems.map(function (f) {
+      const estimatedLOC = totalFileCount > 0 ? Math.round(total * (f.fileCount / totalFileCount)) : 0;
+      const percentage = total > 0 ? Math.round((estimatedLOC / total) * 1000) / 10 : 0;
+      return {
+        name: f.name,
+        estimatedLOC: estimatedLOC,
+        fileCount: f.fileCount,
+        percentage: percentage
+      };
+    });
+    await setCached(folderCacheKey, { folders });
+  } else if (cachedFolders) {
+    folders = cachedFolders.folders || [];
+  }
+
+  const langTotal = languages.reduce(function (sum, l) { return sum + l.linesOfCode; }, 0);
+  languages = languages.map(function (l) {
+    return {
+      language: l.language,
+      linesOfCode: l.linesOfCode,
+      files: l.files || 0,
+      percentage: langTotal > 0 ? Math.round((l.linesOfCode / langTotal) * 1000) / 10 : 0
+    };
+  });
+
+  return {
+    languages: languages,
+    folders: folders,
+    total: total || langTotal,
+    isEstimated: true
+  };
+}
+
+async function fetchLanguageData(owner, repo) {
+  const controller = new AbortController();
+  const timeout = setTimeout(function () { controller.abort(); }, 15000);
+  try {
+    const url = 'https://api.codetabs.com/v1/loc?github=' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo);
+    console.log('[GH-LOC-BG] fetchLanguageData url:', url);
+    const response = await fetch(url, { signal: controller.signal });
+    console.log('[GH-LOC-BG] codetabs status:', response.status);
+    if (!response.ok) {
+      console.log('[GH-LOC-BG] codetabs not ok, falling back to GitHub languages API');
+      return await fetchLanguageDataFallback(owner, repo);
+    }
+    const rows = await response.json();
+    console.log('[GH-LOC-BG] codetabs rows:', Array.isArray(rows) ? rows.length : typeof rows);
+    if (!Array.isArray(rows)) {
+      console.log('[GH-LOC-BG] codetabs non-array, falling back');
+      return await fetchLanguageDataFallback(owner, repo);
+    }
+    const languages = rows
+      .filter(function (item) {
+        return item && item.language && item.language !== 'Total' && Number.isFinite(Number(item.linesOfCode));
+      })
+      .map(function (item) {
+        return {
+          language: item.language,
+          files: Number(item.files) || 0,
+          linesOfCode: Number(item.linesOfCode) || 0
+        };
+      });
+    const total = languages.reduce(function (sum, item) { return sum + item.linesOfCode; }, 0);
+    console.log('[GH-LOC-BG] codetabs total:', total, 'languages:', languages.length);
+    if (total === 0 && languages.length === 0) {
+      console.log('[GH-LOC-BG] codetabs returned empty, falling back');
+      return await fetchLanguageDataFallback(owner, repo);
+    }
+    return { languages: languages, total: total };
+  } catch (err) {
+    console.log('[GH-LOC-BG] codetabs error:', err.message, '- falling back');
+    return await fetchLanguageDataFallback(owner, repo);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchLanguageDataFallback(owner, repo) {
+  try {
+    const headers = await buildGitHubHeaders();
+    const response = await trackedGitHubFetch(
+      'https://api.github.com/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo) + '/languages',
+      headers
+    );
+    if (!response.ok) {
+      console.log('[GH-LOC-BG] GitHub languages API failed:', response.status);
+      return null;
+    }
+    const langBytes = await response.json();
+    console.log('[GH-LOC-BG] GitHub languages API result:', Object.keys(langBytes).length, 'languages');
+    const entries = Object.entries(langBytes);
+    if (!entries.length) return null;
+    const totalBytes = entries.reduce(function (sum, entry) { return sum + entry[1]; }, 0);
+    const BYTES_PER_LINE = 35;
+    const languages = entries.map(function (entry) {
+      return {
+        language: entry[0],
+        files: 0,
+        linesOfCode: Math.round(entry[1] / BYTES_PER_LINE)
+      };
+    });
+    const total = languages.reduce(function (sum, item) { return sum + item.linesOfCode; }, 0);
+    console.log('[GH-LOC-BG] fallback total LOC (estimated):', total);
+    return { languages: languages, total: total };
+  } catch (err) {
+    console.log('[GH-LOC-BG] fallback error:', err.message);
+    return null;
+  }
+}
+
+async function fetchFolderData(owner, repo) {
+  const headers = await buildGitHubHeaders();
+
+  let defaultBranch = 'main';
+  try {
+    const repoResp = await trackedGitHubFetch(
+      'https://api.github.com/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo),
+      headers
+    );
+    if (repoResp.ok) {
+      const repoData = await repoResp.json();
+      defaultBranch = repoData.default_branch || 'main';
+    }
+  } catch (_error) {
+    // use default
+  }
+
+  let topLevel;
+  try {
+    const treeResp = await trackedGitHubFetch(
+      'https://api.github.com/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo) +
+      '/git/trees/' + encodeURIComponent(defaultBranch),
+      headers
+    );
+    if (!treeResp.ok) return null;
+    topLevel = await treeResp.json();
+  } catch (_error) {
+    return null;
+  }
+
+  if (!topLevel || !Array.isArray(topLevel.tree)) return null;
+
+  const folderEntries = topLevel.tree.filter(function (item) {
+    return item.type === 'tree';
+  });
+
+  const folderPromises = folderEntries.slice(0, 50).map(async function (folder) {
+    try {
+      const subResp = await trackedGitHubFetch(
+        'https://api.github.com/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo) +
+        '/git/trees/' + folder.sha + '?recursive=1',
+        headers
+      );
+      if (!subResp.ok) return { name: folder.path, fileCount: 0 };
+      const subTree = await subResp.json();
+      const blobCount = Array.isArray(subTree.tree)
+        ? subTree.tree.filter(function (item) { return item.type === 'blob'; }).length
+        : 0;
+      return { name: folder.path, fileCount: blobCount };
+    } catch (_error) {
+      return { name: folder.path, fileCount: 0 };
+    }
+  });
+
+  const results = await Promise.allSettled(folderPromises);
+  return results
+    .filter(function (r) { return r.status === 'fulfilled'; })
+    .map(function (r) { return r.value; })
+    .filter(function (f) { return f.fileCount > 0; });
 }
 
 async function getGroupedNotifications() {
