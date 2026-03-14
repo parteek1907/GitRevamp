@@ -1,0 +1,16 @@
+/* Stitch-extracted helper styles kept in a separate file for maintainability.
+   The visual design remains defined by Tailwind classes in onboarding.html. */
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+.glass-card {
+  background: rgba(22, 27, 34, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(48, 54, 61, 0.5);
+}
+
+.glow-border:hover {
+  border-color: #3083f8;
+  box-shadow: 0 0 15px rgba(48, 131, 248, 0.2);
+}
