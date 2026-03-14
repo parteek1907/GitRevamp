@@ -254,7 +254,7 @@
       </div>
       <!-- Toggle chevron -->
       <button class="ghh-toggle-chevron" id="ghh-toggle-btn" data-action="toggle" title="Toggle sidebar">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 3.5a1 1 0 0 1 1.4 0l4 4a1 1 0 0 1 0 1.4l-4 4a1 1 0 0 1-1.4-1.4L8.8 8 5.5 4.5a1 1 0 0 1 0-1Z" fill-rule="evenodd"/></svg>
       </button>`;
 
     return el;
