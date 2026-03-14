@@ -1,13 +1,4 @@
-﻿const PROCESSED_ATTR = 'data-health-done';
-const TOC_ATTR = 'data-toc-done';
-const PR_COMPLEXITY_ATTR = 'data-pr-complexity-done';
-const TODO_ATTR = 'data-todo-done';
-const INSIGHTS_ATTR = 'data-insights-done';
-const ISSUES_AGE_ATTR = 'data-issues-age-done';
-const ICONS_ATTR = 'data-icons-done';
-const CLONE_ATTR = 'data-clone-done';
-const STAR_HISTORY_ATTR = 'data-star-history-done';
-const COMMIT_QUALITY_ATTR = 'data-commit-quality-done';
+const PROCESSED_ATTR = 'data-health-done';
 const BOOKMARK_ATTR = 'data-bookmark-done';
 
 const BUILTIN_PAGES = [
@@ -18,20 +9,8 @@ const BUILTIN_PAGES = [
 ];
 
 let settings = {
-  showOnSearch: true,
-  showOnTrending: true,
-  showDeps: true,
   showBusFactor: true,
   showLicenseRisk: true,
-  showReadmeToc: true,
-  showPrComplexity: true,
-  showTodoHighlights: true,
-  showContributionInsights: true,
-  showIssueAge: true,
-  showFileTypeIcons: true,
-  showQuickClone: true,
-  showStarHistory: true,
-  showCommitQuality: true,
   showFileEnhancements: true,
   showMarkdownPrinter: true,
   showVSIcons: true,
@@ -44,7 +23,6 @@ let badgesHidden = false;
 let observer = null;
 let debounceTimer = null;
 let lastUrl = location.href;
-let tocObserver = null;
 let lastTrackedRepo = '';
 let enhancedGithubClickBound = false;
 let enhancedGithubLastUrl = '';
@@ -109,10 +87,6 @@ function scanPage() {
     handleRepoPage(owner, repo);
     trackRecentRepo(owner, repo).catch(() => {});
 
-    if (settings.showQuickClone) {
-      injectQuickCloneButton(owner, repo).catch(() => {});
-    }
-
     if (settings.showFileEnhancements) {
       enhancedGithubMainEntry(owner, repo).catch(() => {});
     }
@@ -123,34 +97,6 @@ function scanPage() {
     }
 
     injectBookmarkButton(owner, repo).catch(() => {});
-
-    if (settings.showStarHistory) {
-      injectStarHistory(owner, repo).catch(() => {});
-    }
-
-    if (settings.showReadmeToc) {
-      injectReadmeToc().catch(() => {});
-    }
-
-    if (settings.showFileTypeIcons) {
-      injectFileTypeIcons(owner, repo).catch(() => {});
-    }
-
-    if (settings.showPrComplexity) {
-      injectPrComplexity(owner, repo).catch(() => {});
-    }
-
-    if (settings.showIssueAge) {
-      injectIssueAge(owner, repo).catch(() => {});
-    }
-
-    if (settings.showCommitQuality) {
-      injectCommitQuality().catch(() => {});
-    }
-
-    if (settings.showTodoHighlights) {
-      injectTodoHighlighter().catch(() => {});
-    }
 
     if (settings.showVSIcons) {
       injectVSCodeFileIcons(owner, repo).catch(() => {});
@@ -171,17 +117,6 @@ function scanPage() {
     injectAbsoluteDates().catch(() => {});
   }
 
-  if (isProfileRoot(segments) && settings.showContributionInsights) {
-    injectContributionInsights().catch(() => {});
-  }
-
-  if (path === '/search' && settings.showOnSearch) {
-    processCardsInBatches(Array.from(document.querySelectorAll('[data-testid="results-list"] li, .repo-list-item')));
-  }
-
-  if ((path.startsWith('/trending') || path.startsWith('/explore')) && settings.showOnTrending) {
-    processCardsInBatches(Array.from(document.querySelectorAll('article.Box-row')));
-  }
 }
 
 function isBuiltinPage(segment) {
@@ -198,17 +133,6 @@ function isProfileRoot(segments) {
   return segments.length === 1 && !isBuiltinPage(segments[0]);
 }
 
-async function processCardsInBatches(cards) {
-  const batchSize = 5;
-  for (let index = 0; index < cards.length; index += batchSize) {
-    const batch = cards.slice(index, index + batchSize);
-    batch.forEach((card) => processCard(card));
-    if (index + batchSize < cards.length) {
-      await wait(100);
-    }
-  }
-}
-
 function handleRepoPage(owner, repo) {
   const title =
     document.querySelector('[data-testid="repository-container-header"] h1') ||
@@ -219,50 +143,6 @@ function handleRepoPage(owner, repo) {
   if (!title || title.hasAttribute(PROCESSED_ATTR)) return;
   title.setAttribute(PROCESSED_ATTR, 'true');
   renderBadgeForTarget(title, owner, repo, 'page');
-}
-
-function processCard(card) {
-  if (card.hasAttribute(PROCESSED_ATTR)) return;
-  const repoInfo = extractRepoFromCard(card);
-  if (!repoInfo) return;
-
-  card.setAttribute(PROCESSED_ATTR, 'true');
-  renderBadgeForTarget(card, repoInfo.owner, repoInfo.repo, 'card');
-}
-
-function extractRepoFromCard(card) {
-  const primaryLink = card.querySelector('h1 a[href], h2 a[href], h3 a[href], a[data-testid="ViewTitleLink"]');
-  const primary = extractRepoParts(primaryLink && primaryLink.getAttribute('href'));
-  if (primary) return primary;
-
-  const anchors = card.querySelectorAll('a[href]');
-  for (const anchor of anchors) {
-    const parts = extractRepoParts(anchor.getAttribute('href'));
-    if (parts) return parts;
-  }
-  return null;
-}
-
-function extractRepoParts(href) {
-  if (!href) return null;
-  let parsed;
-  try {
-    parsed = new URL(href, window.location.origin);
-  } catch (_error) {
-    return null;
-  }
-
-  if (parsed.origin !== window.location.origin) return null;
-
-  const parts = parsed.pathname.split('/').filter(Boolean);
-  if (parts.length !== 2) return null;
-
-  const owner = parts[0];
-  const repo = parts[1];
-  if (isBuiltinPage(owner) || isBuiltinPage(repo)) return null;
-  if (!/^[a-zA-Z0-9_.-]+$/.test(owner) || !/^[a-zA-Z0-9_.-]+$/.test(repo)) return null;
-
-  return { owner, repo };
 }
 
 async function renderBadgeForTarget(target, owner, repo, context) {
@@ -417,6 +297,158 @@ const enhancedGithubCommonUtil = {
     [].forEach.call(document.querySelectorAll(selector), function(el) {
       el.parentNode.removeChild(el);
     });
+  },
+  fetchFolderFilesRecursive: async function(userRepo, folderPath, branch, headers) {
+    const files = [];
+    const url = `https://api.github.com/repos/${userRepo}/contents/${folderPath}?ref=${branch}`;
+    const resp = await window.fetch(url, { headers });
+    if (!resp.ok) return files;
+    const items = await resp.json();
+    for (const item of items) {
+      if (item.type === 'file') {
+        files.push({ path: item.path, download_url: item.download_url });
+      } else if (item.type === 'dir') {
+        const subFiles = await enhancedGithubCommonUtil.fetchFolderFilesRecursive(userRepo, item.path, branch, headers);
+        files.push(...subFiles);
+      }
+    }
+    return files;
+  },
+  downloadFolderAsZip: async function(folderPath, folderName) {
+    const path = enhancedGithubCommonUtil.getUsernameWithReponameFromGithubURL();
+    const userRepo = `${path.user}/${path.repo}`;
+    const branch = enhancedGithubCommonUtil.getBranch() || enhancedGithubStorageUtil.get('defaultBranch') || 'master';
+    const token = settings.github_pat || '';
+    const headers = token ? { Authorization: 'token ' + token, 'User-Agent': 'Awesome-Octocat-App' } : {};
+
+    const files = await enhancedGithubCommonUtil.fetchFolderFilesRecursive(userRepo, folderPath, branch, headers);
+    if (!files.length) return;
+
+    // Minimal ZIP builder (store method, no compression)
+    const encoder = new TextEncoder();
+    const localHeaders = [];
+    const centralHeaders = [];
+    let offset = 0;
+
+    for (const file of files) {
+      const resp = await window.fetch(file.download_url);
+      if (!resp.ok) continue;
+      const blob = await resp.arrayBuffer();
+      const fileData = new Uint8Array(blob);
+      const relativePath = file.path.startsWith(folderPath + '/') ? file.path.slice(folderPath.length + 1) : file.path;
+      const nameBytes = encoder.encode(relativePath);
+
+      // Local file header
+      const local = new Uint8Array(30 + nameBytes.length + fileData.length);
+      const localView = new DataView(local.buffer);
+      localView.setUint32(0, 0x04034b50, true);  // signature
+      localView.setUint16(4, 20, true);           // version needed
+      localView.setUint16(6, 0, true);            // flags
+      localView.setUint16(8, 0, true);            // compression (store)
+      localView.setUint16(10, 0, true);           // mod time
+      localView.setUint16(12, 0, true);           // mod date
+      // CRC-32
+      const crc = enhancedGithubCommonUtil.crc32(fileData);
+      localView.setUint32(14, crc, true);
+      localView.setUint32(18, fileData.length, true); // compressed size
+      localView.setUint32(22, fileData.length, true); // uncompressed size
+      localView.setUint16(26, nameBytes.length, true);
+      localView.setUint16(28, 0, true);           // extra field length
+      local.set(nameBytes, 30);
+      local.set(fileData, 30 + nameBytes.length);
+      localHeaders.push(local);
+
+      // Central directory header
+      const central = new Uint8Array(46 + nameBytes.length);
+      const centralView = new DataView(central.buffer);
+      centralView.setUint32(0, 0x02014b50, true); // signature
+      centralView.setUint16(4, 20, true);          // version made by
+      centralView.setUint16(6, 20, true);          // version needed
+      centralView.setUint16(8, 0, true);           // flags
+      centralView.setUint16(10, 0, true);          // compression
+      centralView.setUint16(12, 0, true);          // mod time
+      centralView.setUint16(14, 0, true);          // mod date
+      centralView.setUint32(16, crc, true);
+      centralView.setUint32(20, fileData.length, true);
+      centralView.setUint32(24, fileData.length, true);
+      centralView.setUint16(28, nameBytes.length, true);
+      centralView.setUint16(30, 0, true);          // extra field length
+      centralView.setUint16(32, 0, true);          // comment length
+      centralView.setUint16(34, 0, true);          // disk number start
+      centralView.setUint16(36, 0, true);          // internal attrs
+      centralView.setUint32(38, 0, true);          // external attrs
+      centralView.setUint32(42, offset, true);     // local header offset
+      central.set(nameBytes, 46);
+      centralHeaders.push(central);
+
+      offset += local.length;
+    }
+
+    // End of central directory
+    let centralSize = 0;
+    centralHeaders.forEach(c => centralSize += c.length);
+    const endRecord = new Uint8Array(22);
+    const endView = new DataView(endRecord.buffer);
+    endView.setUint32(0, 0x06054b50, true);
+    endView.setUint16(4, 0, true);
+    endView.setUint16(6, 0, true);
+    endView.setUint16(8, centralHeaders.length, true);
+    endView.setUint16(10, centralHeaders.length, true);
+    endView.setUint32(12, centralSize, true);
+    endView.setUint32(16, offset, true);
+    endView.setUint16(20, 0, true);
+
+    const zipParts = [...localHeaders, ...centralHeaders, endRecord];
+    const zipBlob = new Blob(zipParts, { type: 'application/zip' });
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = folderName + '.zip';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
+  crc32: function(data) {
+    let crc = 0xFFFFFFFF;
+    if (!enhancedGithubCommonUtil._crc32Table) {
+      enhancedGithubCommonUtil._crc32Table = new Uint32Array(256);
+      for (let i = 0; i < 256; i++) {
+        let c = i;
+        for (let j = 0; j < 8; j++) {
+          c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        }
+        enhancedGithubCommonUtil._crc32Table[i] = c;
+      }
+    }
+    const table = enhancedGithubCommonUtil._crc32Table;
+    for (let i = 0; i < data.length; i++) {
+      crc = table[(crc ^ data[i]) & 0xFF] ^ (crc >>> 8);
+    }
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  },
+  fetchFolderSize: async function(userRepo, folderPath, branch, headers) {
+    try {
+      const response = await window.fetch(
+        `https://api.github.com/repos/${userRepo}/contents/${folderPath}?ref=${branch}`,
+        { headers }
+      );
+      if (!response.ok) return null;
+      const items = await response.json();
+      if (!Array.isArray(items)) return null;
+      let totalSize = 0;
+      for (const item of items) {
+        if (item.type === 'file' && item.size) {
+          totalSize += item.size;
+        } else if (item.type === 'dir') {
+          const subSize = await enhancedGithubCommonUtil.fetchFolderSize(userRepo, item.path, branch, headers);
+          if (subSize !== null) totalSize += subSize;
+        }
+      }
+      return totalSize;
+    } catch (e) {
+      return null;
+    }
   }
 };
 
@@ -489,17 +521,35 @@ const enhancedGithubHandlersUtil = {
       <button aria-label="Copy file contents to clipboard" class="js-file-clipboard btn btn-sm BtnGroup-item file-clipboard-button tooltipped tooltipped-s js-enhanced-github-copy-btn" data-copied-hint="Copied!" type="button" click="selectText()" data-clipboard-target="tbody">
         Copy File
       </button>
-      <a href="${data.download_url}" download="${data.name}"
-        aria-label="(Option + Click) to download. (Cmd/Ctr + Click) to view raw contents." class="js-file-download btn btn-sm BtnGroup-item file-download-button tooltipped tooltipped-s">
+      <button
+        aria-label="Download file" class="js-file-download btn btn-sm BtnGroup-item file-download-button tooltipped tooltipped-s" data-url="${data.download_url}" data-name="${data.name}">
         <span style="margin-right: 5px;">${formattedFileSize}</span>
         <svg class="octicon octicon-cloud-download" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16">
           <path d="M9 12h2l-3 3-3-3h2V7h2v5zm3-8c0-.44-.91-3-4.5-3C5.08 1 3 2.92 3 5 1.02 5 0 6.52 0 8c0 1.53 1 3 3 3h3V9.7H3C1.38 9.7 1.3 8.28 1.3 8c0-.17.05-1.7 1.7-1.7h1.3V5c0-1.39 1.56-2.7 3.2-2.7 2.55 0 3.13 1.55 3.2 1.8v1.2H12c.81 0 2.7.22 2.7 2.2 0 2.09-2.25 2.2-2.7 2.2h-2V11h2c2.08 0 4-1.16 4-3.5C16 5.06 14.08 4 12 4z"></path>
         </svg>
-      </a>`;
+      </button>`;
 
     const btnGroup = document.querySelectorAll('.BtnGroup:not(.d-md-none)')[1];
     if (btnGroup) {
       btnGroup.insertAdjacentHTML('beforeend', btnGroupHtml);
+      const dlBtn = btnGroup.querySelector('.js-file-download');
+      if (dlBtn) {
+        dlBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          const url = this.getAttribute('data-url');
+          const name = this.getAttribute('data-name');
+          window.fetch(url).then(r => r.blob()).then(blob => {
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
+          });
+        });
+      }
     }
   },
   onPathContentFetched: function(data = []) {
@@ -509,16 +559,16 @@ const enhancedGithubHandlersUtil = {
       return;
     }
 
-    let isAnyFilePresent = false;
+    let isAnyFileOrDirPresent = false;
 
     for (let i = 0; i < data.length; i++) {
-      if (data[i].type === 'file') {
-        isAnyFilePresent = true;
+      if (data[i].type === 'file' || data[i].type === 'dir') {
+        isAnyFileOrDirPresent = true;
         break;
       }
     }
 
-    if (!isAnyFilePresent) {
+    if (!isAnyFileOrDirPresent) {
       return;
     }
 
@@ -571,18 +621,111 @@ const enhancedGithubHandlersUtil = {
 
         if (isValidFile) {
           const formattedFileSize = enhancedGithubCommonUtil.getFileSizeAndUnit(data[actualDataIndex]);
+          const fileUrl = data[actualDataIndex].download_url;
+          const fileName = data[actualDataIndex].name;
+          const fileDlId = 'eg-file-dl-' + actualDataIndex;
 
           commitElem.parentElement.insertAdjacentHTML('beforebegin', `
             <td class="eg-download">
-              <a class="tooltipped tooltipped-s" href="${data[actualDataIndex].download_url}" title="(Option + Click) to download. (Cmd/Ctr + Click) to view raw contents." aria-label="(Option + Click) to download. (Cmd/Ctr + Click) to view raw contents."
-                download="${data[actualDataIndex].name}">
-                <svg class="octicon octicon-cloud-download" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16">
-                  <path d="M9 12h2l-3 3-3-3h2V7h2v5zm3-8c0-.44-.91-3-4.5-3C5.08 1 3 2.92 3 5 1.02 5 0 6.52 0 8c0 1.53 1 3 3 3h3V9.7H3C1.38 9.7 1.3 8.28 1.3 8c0-.17.05-1.7 1.7-1.7h1.3V5c0-1.39 1.56-2.7 3.2-2.7 2.55 0 3.13 1.55 3.2 1.8v1.2H12c.81 0 2.7.22 2.7 2.2 0 2.09-2.25 2.2-2.7 2.2h-2V11h2c2.08 0 4-1.16 4-3.5C16 5.06 14.08 4 12 4z"></path>
-                </svg>
+              <div class="eg-file-cell" id="${fileDlId}" data-url="${fileUrl}" data-name="${fileName}" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
                 <span class="react-directory-download Link--secondary">${formattedFileSize}</span>
-              </a>
+                <span class="eg-file-dl-icon" title="Download file" style="display:none;opacity:0;transition:opacity 0.2s;">
+                  <svg class="octicon octicon-cloud-download" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16">
+                    <path d="M9 12h2l-3 3-3-3h2V7h2v5zm3-8c0-.44-.91-3-4.5-3C5.08 1 3 2.92 3 5 1.02 5 0 6.52 0 8c0 1.53 1 3 3 3h3V9.7H3C1.38 9.7 1.3 8.28 1.3 8c0-.17.05-1.7 1.7-1.7h1.3V5c0-1.39 1.56-2.7 3.2-2.7 2.55 0 3.13 1.55 3.2 1.8v1.2H12c.81 0 2.7.22 2.7 2.2 0 2.09-2.25 2.2-2.7 2.2h-2V11h2c2.08 0 4-1.16 4-3.5C16 5.06 14.08 4 12 4z"></path>
+                  </svg>
+                </span>
+              </div>
             </td>
           `);
+          setTimeout(() => {
+            const cell = document.getElementById(fileDlId);
+            if (cell) {
+              const dlIcon = cell.querySelector('.eg-file-dl-icon');
+              cell.addEventListener('mouseenter', function() {
+                if (dlIcon) { dlIcon.style.display = 'inline-flex'; setTimeout(() => { dlIcon.style.opacity = '1'; }, 10); }
+              });
+              cell.addEventListener('mouseleave', function() {
+                if (dlIcon) { dlIcon.style.opacity = '0'; setTimeout(() => { dlIcon.style.display = 'none'; }, 200); }
+              });
+              cell.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const url = this.getAttribute('data-url');
+                const name = this.getAttribute('data-name');
+                window.fetch(url).then(r => r.blob()).then(blob => {
+                  const blobUrl = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = blobUrl;
+                  a.download = name;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(blobUrl);
+                });
+              });
+            }
+          }, 0);
+        } else if (data[actualDataIndex].type === 'dir') {
+          const folderPath = data[actualDataIndex].path;
+          const folderName = data[actualDataIndex].name;
+          const btnId = 'eg-folder-dl-' + actualDataIndex;
+          const sizeSpanId = 'eg-folder-size-' + actualDataIndex;
+          commitElem.parentElement.insertAdjacentHTML('beforebegin', `
+            <td class="eg-download">
+              <div class="eg-folder-cell" id="${btnId}" data-folder-path="${folderPath}" data-folder-name="${folderName}" style="position:relative;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                <span id="${sizeSpanId}" class="react-directory-download Link--secondary">...</span>
+                <span class="eg-folder-zip-icon" title="Download folder as ZIP" style="display:none;opacity:0;transition:opacity 0.2s;">
+                  <svg class="octicon octicon-cloud-download" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16">
+                    <path d="M9 12h2l-3 3-3-3h2V7h2v5zm3-8c0-.44-.91-3-4.5-3C5.08 1 3 2.92 3 5 1.02 5 0 6.52 0 8c0 1.53 1 3 3 3h3V9.7H3C1.38 9.7 1.3 8.28 1.3 8c0-.17.05-1.7 1.7-1.7h1.3V5c0-1.39 1.56-2.7 3.2-2.7 2.55 0 3.13 1.55 3.2 1.8v1.2H12c.81 0 2.7.22 2.7 2.2 0 2.09-2.25 2.2-2.7 2.2h-2V11h2c2.08 0 4-1.16 4-3.5C16 5.06 14.08 4 12 4z"></path>
+                  </svg>
+                </span>
+              </div>
+            </td>
+          `);
+          // Async fetch folder size
+          (function(fPath, spanId, elId) {
+            const repoInfo = enhancedGithubCommonUtil.getUsernameWithReponameFromGithubURL();
+            const uRepo = repoInfo.user + '/' + repoInfo.repo;
+            const br = enhancedGithubCommonUtil.getBranch() || enhancedGithubStorageUtil.get('defaultBranch') || 'master';
+            const tk = settings.github_pat || '';
+            const hdrs = tk ? { Authorization: 'token ' + tk, 'User-Agent': 'Awesome-Octocat-App' } : {};
+            enhancedGithubCommonUtil.fetchFolderSize(uRepo, fPath, br, hdrs).then(function(totalBytes) {
+              const el = document.getElementById(spanId);
+              if (!el) return;
+              if (totalBytes === null) { el.textContent = '-'; return; }
+              const formatted = enhancedGithubCommonUtil.convertSizeToHumanReadableFormat(totalBytes);
+              el.textContent = formatted.size + ' ' + formatted.measure;
+            }).catch(function() {
+              const el = document.getElementById(spanId);
+              if (el) el.textContent = '-';
+            });
+          })(folderPath, sizeSpanId, btnId);
+          setTimeout(() => {
+            const cell = document.getElementById(btnId);
+            if (cell) {
+              const zipIcon = cell.querySelector('.eg-folder-zip-icon');
+              cell.addEventListener('mouseenter', function() {
+                if (zipIcon) { zipIcon.style.display = 'inline-flex'; setTimeout(() => { zipIcon.style.opacity = '1'; }, 10); }
+              });
+              cell.addEventListener('mouseleave', function() {
+                if (zipIcon) { zipIcon.style.opacity = '0'; setTimeout(() => { zipIcon.style.display = 'none'; }, 200); }
+              });
+              cell.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const fp = this.getAttribute('data-folder-path');
+                const fn = this.getAttribute('data-folder-name');
+                const sizeEl = this.querySelector('#' + sizeSpanId);
+                const origText = sizeEl ? sizeEl.textContent : '';
+                if (sizeEl) sizeEl.textContent = 'Downloading...';
+                enhancedGithubCommonUtil.downloadFolderAsZip(fp, fn).then(() => {
+                  if (sizeEl) sizeEl.textContent = origText;
+                }).catch(() => {
+                  if (sizeEl) sizeEl.textContent = origText;
+                });
+              });
+            }
+          }, 0);
         } else {
           commitElem.parentElement.insertAdjacentHTML('beforebegin', '<td class="eg-download"><div class="react-directory-download"></div></td>');
         }
@@ -837,20 +980,6 @@ function buildExpandedLines(data, history, colorClass, context) {
     lines.push(busFactorLine);
   }
 
-  if (settings.showDeps && data.hasDeps && data.deps) {
-    const depsLine = document.createElement('div');
-    depsLine.className = 'gh-health-line';
-    if (data.deps.riskLabel === 'Clean') {
-      depsLine.textContent = 'ðŸ“¦ Dependencies clean';
-    } else {
-      const parts = [];
-      if (safeNonNegative(data.deps.outdatedCount) > 0) parts.push(`${safeNonNegative(data.deps.outdatedCount)} deps outdated`);
-      if (safeNonNegative(data.deps.vulnerableCount) > 0) parts.push(`${safeNonNegative(data.deps.vulnerableCount)} vuln`);
-      depsLine.textContent = `ðŸ“¦ ${parts.join(' Â· ')}`;
-    }
-    lines.push(depsLine);
-  }
-
   const licenseText = getLicenseBadgeLine(data);
   if (settings.showLicenseRisk && licenseText) {
     const licenseLine = document.createElement('div');
@@ -925,560 +1054,6 @@ function getLicenseBadgeLine(data) {
     return 'â“ License unclear';
   }
   return null;
-}
-
-async function injectReadmeToc() {
-  const bodyWidth = document.body.clientWidth;
-  const mainContent = document.querySelector('#readme, .markdown-body');
-  const mainRect = mainContent?.getBoundingClientRect();
-  const leftSpace = mainRect?.left ?? 0;
-
-  if (!mainContent || bodyWidth <= 0 || leftSpace < 220) return;
-
-  const body = document.body;
-  if (body.hasAttribute(TOC_ATTR)) return;
-
-  const markdownBody = mainContent.matches('.markdown-body')
-    ? mainContent
-    : mainContent.querySelector('article.markdown-body, .markdown-body');
-  if (!markdownBody) return;
-
-  const headings = Array.from(markdownBody.querySelectorAll('h2, h3'));
-  if (headings.length < 3) return;
-
-  body.setAttribute(TOC_ATTR, 'true');
-
-  injectReadingTime(markdownBody, headings);
-
-  let panel = document.querySelector('.gh-readme-toc');
-  if (!panel) {
-    panel = document.createElement('aside');
-    panel.className = 'gh-readme-toc gh-toc-panel';
-
-    const topRow = document.createElement('div');
-    topRow.className = 'gh-readme-toc-header';
-
-    const title = document.createElement('span');
-    title.className = 'gh-readme-toc-title';
-    title.textContent = 'README TOC';
-
-    const toggle = document.createElement('button');
-    toggle.type = 'button';
-    toggle.className = 'gh-readme-toc-toggle';
-    toggle.textContent = 'â€¹';
-
-    const list = document.createElement('div');
-    list.className = 'gh-readme-toc-list';
-
-    topRow.appendChild(title);
-    topRow.appendChild(toggle);
-    panel.appendChild(topRow);
-    panel.appendChild(list);
-    document.body.appendChild(panel);
-
-    toggle.addEventListener('click', () => {
-      const collapsed = panel.classList.toggle('is-collapsed');
-      toggle.textContent = collapsed ? 'â€º' : 'â€¹';
-      chrome.storage.local.set({ toc_collapsed: collapsed });
-    });
-
-    chrome.storage.local.get('toc_collapsed', (result) => {
-      const collapsed = Boolean(result.toc_collapsed);
-      panel.classList.toggle('is-collapsed', collapsed);
-      toggle.textContent = collapsed ? 'â€º' : 'â€¹';
-    });
-  }
-
-  panel.style.right = 'auto';
-  panel.style.left = `${Math.max(16, leftSpace - 216)}px`;
-  panel.style.top = '72px';
-
-  const list = panel.querySelector('.gh-readme-toc-list');
-  while (list && list.firstChild) list.removeChild(list.firstChild);
-
-  const linkMap = new Map();
-
-  headings.forEach((heading, index) => {
-    if (!heading.id) {
-      heading.id = `gh-toc-heading-${index}`;
-    }
-    const link = document.createElement('a');
-    link.href = `#${heading.id}`;
-    link.className = 'gh-readme-toc-item';
-    if (heading.tagName.toLowerCase() === 'h3') {
-      link.classList.add('is-sub');
-    }
-    link.textContent = heading.textContent.trim();
-    link.addEventListener('click', (event) => {
-      event.preventDefault();
-      heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-    if (list) list.appendChild(link);
-    linkMap.set(heading.id, link);
-  });
-
-  if (tocObserver) {
-    tocObserver.disconnect();
-  }
-
-  tocObserver = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      const id = entry.target.id;
-      const link = linkMap.get(id);
-      if (!link) return;
-      if (entry.isIntersecting) {
-        linkMap.forEach((value) => value.classList.remove('is-active'));
-        link.classList.add('is-active');
-      }
-    });
-  }, { rootMargin: '0px 0px -70% 0px', threshold: 0.1 });
-
-  headings.forEach((heading) => tocObserver.observe(heading));
-}
-
-function injectReadingTime(markdownBody, headings) {
-  if (markdownBody.querySelector('.gh-readme-reading-time')) return;
-  const words = countWords(markdownBody.textContent || '');
-  const mins = Math.max(1, Math.round(words / 200));
-  const meta = document.createElement('div');
-  meta.className = 'gh-readme-reading-time';
-  meta.textContent = `ðŸ“– ~${mins} min read Â· ${words} words`;
-  const firstHeading = headings[0];
-  if (firstHeading) {
-    firstHeading.parentNode.insertBefore(meta, firstHeading);
-  } else {
-    markdownBody.insertBefore(meta, markdownBody.firstChild);
-  }
-}
-
-async function injectPrComplexity(owner, repo) {
-  const match = location.pathname.match(/^\/[^/]+\/[^/]+\/pull\/(\d+)/);
-  if (!match) return;
-  if (document.body.hasAttribute(PR_COMPLEXITY_ATTR)) return;
-  document.body.setAttribute(PR_COMPLEXITY_ATTR, 'true');
-
-  let response;
-  try {
-    response = await sendMessage({
-      type: 'GET_PR_COMPLEXITY',
-      payload: { owner, repo, number: Number(match[1]) }
-    });
-  } catch (_error) {
-    return;
-  }
-
-  if (!response || !response.success || !response.data) return;
-  const data = response.data;
-
-  const header = document.querySelector('#partial-discussion-header');
-  if (!header || header.parentNode.querySelector('.gh-pr-complexity')) return;
-
-  const banner = document.createElement('div');
-  banner.className = `gh-pr-complexity gh-pr-${data.complexity}`;
-
-  const top = document.createElement('div');
-  top.className = 'gh-pr-complexity-main';
-  top.textContent = `[${capitalize(data.complexity)} PR] ${data.totalFiles} files Â· +${data.totalAdditions} -${data.totalDeletions} lines Â· ${data.testFileCount} test files (${data.testRatio}%)`;
-  banner.appendChild(top);
-
-  if (data.complexity === 'massive') {
-    const warn = document.createElement('div');
-    warn.className = 'gh-pr-complexity-warn';
-    warn.textContent = 'âš ï¸ This PR is too large to review effectively. Consider splitting into smaller PRs.';
-    banner.appendChild(warn);
-  }
-
-  const toggle = document.createElement('button');
-  toggle.type = 'button';
-  toggle.className = 'gh-pr-breakdown-toggle';
-  toggle.textContent = 'Show file breakdown';
-
-  const body = document.createElement('div');
-  body.className = 'gh-pr-breakdown';
-
-  data.extensionBreakdown.slice(0, 12).forEach((item) => {
-    const chunk = document.createElement('span');
-    chunk.className = 'gh-pr-breakdown-item';
-    chunk.textContent = `${item.extension}: ${item.count} files`;
-    body.appendChild(chunk);
-  });
-
-  toggle.addEventListener('click', () => {
-    const shown = body.classList.toggle('is-open');
-    toggle.textContent = shown ? 'Hide file breakdown' : 'Show file breakdown';
-  });
-
-  banner.appendChild(toggle);
-  banner.appendChild(body);
-  header.insertAdjacentElement('afterend', banner);
-}
-
-async function injectTodoHighlighter() {
-  if (!/\/blob\//.test(location.pathname)) return;
-  const fileTable = document.querySelector('table.js-file-line-container, table');
-  if (!fileTable || fileTable.hasAttribute(TODO_ATTR)) return;
-  fileTable.setAttribute(TODO_ATTR, 'true');
-
-  const keywordRegex = /\b(TODO|FIXME|HACK|XXX|DEPRECATED|BUG|NOTE|OPTIMIZE)\b/i;
-  const counts = {};
-  const firstHits = {};
-
-  const lines = fileTable.querySelectorAll('td.blob-code, td.react-code-cell');
-  lines.forEach((line) => {
-    const text = (line.textContent || '').trim();
-    const match = text.match(keywordRegex);
-    if (!match) return;
-
-    const keyword = match[1].toUpperCase();
-    counts[keyword] = (counts[keyword] || 0) + 1;
-    if (!firstHits[keyword]) firstHits[keyword] = line;
-
-    line.classList.add('gh-todo-line');
-
-    if (!line.querySelector('.gh-todo-pill')) {
-      const pill = document.createElement('span');
-      pill.className = `gh-todo-pill gh-todo-${keyword.toLowerCase()}`;
-      pill.textContent = keyword;
-      line.insertBefore(pill, line.firstChild);
-    }
-  });
-
-  const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
-  if (!total) return;
-
-  if (document.querySelector('.gh-todo-summary')) return;
-  const summary = document.createElement('div');
-  summary.className = 'gh-todo-summary';
-  summary.appendChild(document.createTextNode(`${total} annotations in this file:`));
-
-  Object.keys(counts).forEach((key) => {
-    const link = document.createElement('button');
-    link.type = 'button';
-    link.className = 'gh-todo-summary-link';
-    link.textContent = `${counts[key]} ${key}`;
-    link.addEventListener('click', () => {
-      const target = firstHits[key];
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
-    summary.appendChild(link);
-  });
-
-  const wrap = fileTable.closest('.js-file, .file') || fileTable.parentNode;
-  if (wrap) {
-    wrap.insertBefore(summary, wrap.firstChild);
-  }
-}
-
-async function injectContributionInsights() {
-  const graph = document.querySelector('.js-yearly-contributions, .js-profile-editable-area .js-yearly-contributions');
-  if (!graph || graph.hasAttribute(INSIGHTS_ATTR)) return;
-
-  const cells = Array.from(graph.querySelectorAll('[data-date][data-count]'));
-  if (!cells.length) return;
-
-  const points = cells
-    .map((cell) => {
-      const date = cell.getAttribute('data-date');
-      const count = Number(cell.getAttribute('data-count')) || 0;
-      const ts = new Date(date).getTime();
-      return { date, count, ts };
-    })
-    .filter((item) => Number.isFinite(item.ts))
-    .sort((a, b) => a.ts - b.ts);
-
-  if (!points.length || points.every((item) => item.count === 0)) return;
-  graph.setAttribute(INSIGHTS_ATTR, 'true');
-
-  const totalsByMonth = new Map();
-  const totalsByWeekday = new Map();
-  let total = 0;
-  let activeDays = 0;
-  let longest = 0;
-  let current = 0;
-  let rolling = 0;
-  let best = points[0];
-
-  points.forEach((point, index) => {
-    total += point.count;
-    if (point.count > 0) {
-      activeDays += 1;
-      rolling += 1;
-      if (rolling > longest) longest = rolling;
-      best = point.count > best.count ? point : best;
-    } else {
-      rolling = 0;
-    }
-
-    const date = new Date(point.ts);
-    const month = date.getMonth();
-    const weekday = date.getDay();
-    totalsByMonth.set(month, (totalsByMonth.get(month) || 0) + point.count);
-    totalsByWeekday.set(weekday, (totalsByWeekday.get(weekday) || 0) + point.count);
-
-    if (index === points.length - 1) {
-      current = rolling;
-    }
-  });
-
-  const topWeekday = [...totalsByWeekday.entries()].sort((a, b) => b[1] - a[1])[0];
-  const topMonth = [...totalsByMonth.entries()].sort((a, b) => b[1] - a[1])[0];
-  const avgActive = activeDays ? (total / activeDays) : 0;
-
-  const panel = document.createElement('div');
-  panel.className = 'gh-insights-panel';
-  panel.appendChild(makeInsightCard('ðŸ”¥ Current streak', `${current} days`));
-  panel.appendChild(makeInsightCard('âš¡ Longest streak', `${longest} days`));
-  panel.appendChild(makeInsightCard('ðŸ“… Most active', weekdayName(topWeekday ? topWeekday[0] : 0)));
-  panel.appendChild(makeInsightCard('ðŸ† Best day', `${formatShortDate(best.date)} (${best.count} contributions)`));
-  panel.appendChild(makeInsightCard('ðŸ“Š Avg active day', `${avgActive.toFixed(1)} contributions`));
-
-  const anchor = graph.closest('.js-yearly-contributions') || graph;
-  anchor.insertAdjacentElement('afterend', panel);
-}
-
-function makeInsightCard(label, value) {
-  const card = document.createElement('div');
-  card.className = 'gh-insight-card';
-  const top = document.createElement('div');
-  top.className = 'gh-insight-label';
-  top.textContent = label;
-  const bottom = document.createElement('div');
-  bottom.className = 'gh-insight-value';
-  bottom.textContent = value;
-  card.appendChild(top);
-  card.appendChild(bottom);
-  return card;
-}
-
-async function injectIssueAge(owner, repo) {
-  if (!new RegExp(`^/${owner}/${repo}/issues$`).test(location.pathname)) return;
-  const list = document.querySelector('[aria-label="Issues"], .js-navigation-container');
-  if (!list || list.hasAttribute(ISSUES_AGE_ATTR)) return;
-  list.setAttribute(ISSUES_AGE_ATTR, 'true');
-
-  const rows = Array.from(document.querySelectorAll('[id^="issue_"], .js-issue-row'));
-  if (!rows.length) return;
-
-  const buckets = {
-    new: [],
-    recent: [],
-    aging: [],
-    old: [],
-    stale: []
-  };
-
-  rows.forEach((row) => {
-    if (row.querySelector('.gh-issue-age')) return;
-    const timeEl = row.querySelector('relative-time[datetime], time[datetime]');
-    if (!timeEl) return;
-    const date = new Date(timeEl.getAttribute('datetime'));
-    const days = Math.max(0, Math.floor((Date.now() - date.getTime()) / 86400000));
-
-    let bucket = 'new';
-    let label = 'New';
-    if (days <= 7) {
-      bucket = 'new';
-      label = 'New';
-    } else if (days <= 30) {
-      bucket = 'recent';
-      label = 'Recent';
-    } else if (days <= 90) {
-      bucket = 'aging';
-      label = 'Aging';
-    } else if (days <= 180) {
-      bucket = 'old';
-      label = 'Old';
-    } else {
-      bucket = 'stale';
-      label = 'Stale';
-    }
-
-    const marker = document.createElement('span');
-    marker.className = `gh-issue-age gh-issue-${bucket}`;
-    marker.textContent = `ðŸ• ${label}`;
-    row.appendChild(marker);
-    buckets[bucket].push(row);
-  });
-
-  if (document.querySelector('.gh-issues-summary')) return;
-
-  const summary = document.createElement('div');
-  summary.className = 'gh-issues-summary';
-  summary.appendChild(document.createTextNode(
-    `${rows.length} open issues: ${buckets.new.length} new Â· ${buckets.recent.length} recent Â· ${buckets.aging.length} aging Â· ${buckets.old.length} old Â· ${buckets.stale.length} stale`
-  ));
-
-  ['new', 'recent', 'aging', 'old', 'stale'].forEach((bucket) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'gh-issues-filter';
-    btn.textContent = bucket;
-    btn.addEventListener('click', () => {
-      const first = buckets[bucket][0];
-      if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
-    summary.appendChild(btn);
-  });
-
-  const listRoot = document.querySelector('[aria-label="Issues"], .js-navigation-container');
-  if (listRoot && listRoot.parentNode) {
-    listRoot.parentNode.insertBefore(summary, listRoot);
-  }
-}
-
-async function injectFileTypeIcons(owner, repo) {
-  const isTreeLike = /\/[^/]+\/[^/]+(\/tree\/|$)/.test(location.pathname);
-  if (!isTreeLike) return;
-
-  const tree = document.querySelector('table[aria-labelledby="folders-and-files"], div[role="grid"]');
-  if (!tree || tree.hasAttribute(ICONS_ATTR)) return;
-  tree.setAttribute(ICONS_ATTR, 'true');
-
-  const rows = tree.querySelectorAll('tr, div[role="row"]');
-  rows.forEach((row) => {
-    if (row.hasAttribute('data-icon-replaced')) return;
-    const fileLink = row.querySelector(`a[href^="/${owner}/${repo}/blob/"]`);
-    const folderLink = row.querySelector(`a[href^="/${owner}/${repo}/tree/"]`);
-    const iconSvg = row.querySelector('svg');
-    if (!iconSvg) return;
-
-    let dataUri = '';
-    if (fileLink) {
-      dataUri = getMaterialFileIconDataUri((fileLink.textContent || '').trim());
-    } else if (folderLink) {
-      dataUri = getMaterialFolderIconDataUri((folderLink.textContent || '').trim());
-    }
-    if (!dataUri) return;
-
-    const img = document.createElement('img');
-    img.src = dataUri;
-    img.width = 16;
-    img.height = 16;
-    img.alt = '';
-    img.style.verticalAlign = 'middle';
-    img.style.marginRight = '4px';
-    img.style.borderRadius = '2px';
-
-    iconSvg.replaceWith(img);
-    row.setAttribute('data-icon-replaced', 'true');
-  });
-}
-
-function getMaterialFileIconDataUri(filename) {
-  const lower = filename.toLowerCase();
-  if (lower === 'package.json') return buildTextIconUri('JSON', '#cb3837', '#fff', 7);
-  if (lower === 'tsconfig.json') return buildTextIconUri('TS', '#3178c6', '#fff', 8);
-  if (/^\.eslintrc/.test(lower)) return buildTextIconUri('CFG', '#4b32c3', '#fff', 7);
-  if (/^\.prettierrc/.test(lower)) return buildTextIconUri('CFG', '#f7ba3e', '#000', 7);
-  if (lower === 'dockerfile') return buildTextIconUri('DO', '#0db7ed', '#fff', 8);
-  if (lower === '.gitignore') return buildTextIconUri('GIT', '#f54d27', '#fff', 8);
-  if (lower === '.env' || lower.startsWith('.env.')) return buildTextIconUri('ENV', '#3c873a', '#fff', 8);
-  if (lower.startsWith('readme')) return buildTextIconUri('RD', '#2ea043', '#fff', 8);
-  if (lower.startsWith('license')) return buildTextIconUri('L', '#d29922', '#fff', 9);
-  if (/\.test\./.test(lower) || /\.spec\./.test(lower)) return buildTextIconUri('TEST', '#21a366', '#fff', 7);
-
-  const ext = lower.includes('.') ? lower.slice(lower.lastIndexOf('.') + 1) : '';
-  const map = {
-    js: ['JS', '#f7df1e', '#000', 8], mjs: ['JS', '#f7df1e', '#000', 8], cjs: ['JS', '#f7df1e', '#000', 8],
-    ts: ['TS', '#3178c6', '#fff', 8], tsx: ['X', '#61dafb', '#000', 9], jsx: ['X', '#61dafb', '#000', 9],
-    py: ['PY', '#3572a5', '#fff', 8], rs: ['RS', '#dea584', '#000', 8], go: ['GO', '#00add8', '#fff', 8],
-    java: ['JV', '#b07219', '#fff', 8], cs: ['C#', '#178600', '#fff', 8], cpp: ['C', '#555555', '#fff', 9], cc: ['C', '#555555', '#fff', 9], c: ['C', '#555555', '#fff', 9],
-    rb: ['RB', '#701516', '#fff', 8], php: ['PHP', '#4f5d95', '#fff', 8], swift: ['SW', '#f05138', '#fff', 8], kt: ['KT', '#7f52ff', '#fff', 8],
-    html: ['H', '#e34c26', '#fff', 10], css: ['CSS', '#563d7c', '#fff', 8], scss: ['SC', '#c6538c', '#fff', 8],
-    json: ['{}', '#292929', '#f7df1e', 9], md: ['MD', '#083fa1', '#fff', 8], mdx: ['MD', '#083fa1', '#fff', 8],
-    yaml: ['YML', '#cb171e', '#fff', 8], yml: ['YML', '#cb171e', '#fff', 8], toml: ['TML', '#9c4121', '#fff', 8],
-    sh: ['SH', '#89e051', '#000', 8], bash: ['SH', '#89e051', '#000', 8], dockerfile: ['DO', '#0db7ed', '#fff', 8],
-    sql: ['SQL', '#e38c00', '#fff', 8], vue: ['VUE', '#41b883', '#fff', 8], svelte: ['SV', '#ff3e00', '#fff', 8],
-    graphql: ['GQL', '#e10098', '#fff', 8], gql: ['GQL', '#e10098', '#fff', 8], lock: ['L', '#888888', '#fff', 9]
-  };
-  const cfg = map[ext];
-  if (!cfg) return '';
-  return buildTextIconUri(cfg[0], cfg[1], cfg[2], cfg[3]);
-}
-
-function getMaterialFolderIconDataUri(folderName) {
-  const key = folderName.toLowerCase();
-  const map = {
-    src: '#3178c6', components: '#00add8', pages: '#7f52ff', api: '#e38c00', tests: '#21a366', '__tests__': '#21a366',
-    assets: '#f1e05a', static: '#f1e05a', public: '#f1e05a', styles: '#c6538c', css: '#c6538c',
-    utils: '#6d8086', lib: '#6d8086', helpers: '#6d8086', docs: '#607d8b', '.github': '#24292f',
-    node_modules: '#da3633', dist: '#d29922', build: '#d29922', out: '#d29922', '.git': '#f54d27'
-  };
-  const color = map[key];
-  if (!color) return '';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M1 3.5A1.5 1.5 0 012.5 2h3.44l1.5 1.5H13.5A1.5 1.5 0 0115 5v7a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 011 12.5z" fill="${color}"/></svg>`;
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-}
-
-function buildTextIconUri(label, bg, fg, size) {
-  const safeLabel = String(label).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><rect width="16" height="16" rx="2" fill="${bg}"/><text x="8" y="11" font-family="-apple-system,sans-serif" font-size="${size}" font-weight="700" fill="${fg}" text-anchor="middle">${safeLabel}</text></svg>`;
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-}
-
-async function injectQuickCloneButton(owner, repo) {
-  if (document.body.hasAttribute(CLONE_ATTR)) return;
-  const codeButton = document.querySelector('[data-testid="CodeButton"], get-repo summary, .file-navigation [aria-label="Code"]');
-  if (!codeButton) return;
-  document.body.setAttribute(CLONE_ATTR, 'true');
-
-  const wrap = codeButton.closest('div, details')?.parentNode || codeButton.parentNode;
-  if (!wrap || wrap.querySelector('.gh-quick-clone-wrap')) return;
-
-  const prefResponse = await sendMessage({ type: 'GET_CLONE_PREFERENCE' }).catch(() => ({ clone_preference: 'https' }));
-  const preferred = (prefResponse && prefResponse.clone_preference) || 'https';
-
-  const optionList = [
-    { key: 'ssh', cmd: `git clone git@github.com:${owner}/${repo}.git` },
-    { key: 'https', cmd: `git clone https://github.com/${owner}/${repo}.git` },
-    { key: 'cli', cmd: `gh repo clone ${owner}/${repo}` }
-  ];
-
-  optionList.sort((a, b) => (a.key === preferred ? -1 : b.key === preferred ? 1 : 0));
-
-  const host = document.createElement('div');
-  host.className = 'gh-quick-clone-wrap';
-
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'btn btn-sm gh-quick-clone-btn';
-  button.textContent = 'Quick Clone';
-
-  const panel = document.createElement('div');
-  panel.className = 'gh-quick-clone-panel';
-
-  optionList.forEach((item) => {
-    const row = document.createElement('button');
-    row.type = 'button';
-    row.className = 'gh-quick-clone-option';
-    row.textContent = `${item.key.toUpperCase()}: ${item.cmd}`;
-    row.addEventListener('click', async () => {
-      await navigator.clipboard.writeText(item.cmd);
-      await sendMessage({ type: 'SET_CLONE_PREFERENCE', payload: { preference: item.key } }).catch(() => {});
-      panel.classList.remove('is-open');
-      const old = button.textContent;
-      button.textContent = 'âœ… Copied!';
-      setTimeout(() => {
-        button.textContent = old;
-      }, 1500);
-    });
-    panel.appendChild(row);
-  });
-
-  button.addEventListener('click', (event) => {
-    event.stopPropagation();
-    panel.classList.toggle('is-open');
-  });
-
-  document.addEventListener('click', (event) => {
-    if (!host.contains(event.target)) {
-      panel.classList.remove('is-open');
-    }
-  });
-
-  host.appendChild(button);
-  host.appendChild(panel);
-  wrap.insertBefore(host, codeButton.closest('div, details') || codeButton);
 }
 
 async function injectBookmarkButton(owner, repo) {
@@ -1580,269 +1155,6 @@ async function trackRecentRepo(owner, repo) {
   }).catch(() => {});
 }
 
-async function injectStarHistory(owner, repo) {
-  if (document.body.hasAttribute(STAR_HISTORY_ATTR)) return;
-
-  const starsAnchor = document.querySelector('a[href$="/stargazers"], #repo-stars-counter-star');
-  if (!starsAnchor) return;
-  document.body.setAttribute(STAR_HISTORY_ATTR, 'true');
-
-  const response = await sendMessage({ type: 'GET_STAR_HISTORY', payload: { owner, repo } }).catch(() => null);
-  if (!response || !response.success || !response.data) return;
-
-  if (document.querySelector('.gh-star-history')) return;
-
-  const wrap = document.createElement('div');
-  wrap.className = 'gh-star-history';
-
-  const svg = buildInlineSparkline(response.data.points || []);
-  wrap.appendChild(svg);
-
-  const meta = document.createElement('div');
-  meta.className = 'gh-star-history-meta';
-  if (response.data.monthlyGrowth) {
-    meta.textContent = `+${formatCompact(response.data.monthlyGrowth)} this month`;
-  } else if (response.data.firstStarAt) {
-    meta.textContent = `First starred: ${formatMonthYear(response.data.firstStarAt)}`;
-  } else {
-    meta.textContent = 'Star history unavailable';
-  }
-
-  wrap.appendChild(meta);
-  const host = starsAnchor.closest('div, li, p') || starsAnchor.parentNode;
-  if (host) {
-    host.appendChild(wrap);
-  }
-}
-
-function buildInlineSparkline(points) {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('width', '120');
-  svg.setAttribute('height', '32');
-  svg.setAttribute('viewBox', '0 0 120 32');
-  svg.classList.add('gh-star-sparkline');
-
-  const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-  const safePoints = points.length ? points : [{ x: 0, y: 0 }, { x: 4, y: 1 }];
-  const maxY = Math.max(...safePoints.map((p) => p.y), 1);
-
-  const mapped = safePoints.map((point, index) => {
-    const x = 4 + (index / Math.max(1, safePoints.length - 1)) * 112;
-    const y = 28 - ((point.y || 0) / maxY) * 24;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  });
-
-  polyline.setAttribute('points', mapped.join(' '));
-  polyline.setAttribute('stroke', '#2f81f7');
-  polyline.setAttribute('stroke-width', '2');
-  polyline.setAttribute('fill', 'none');
-  svg.appendChild(polyline);
-  return svg;
-}
-
-async function injectCommitQuality() {
-  if (!/\/commits\//.test(location.pathname) && !/\/commits$/.test(location.pathname)) return;
-  const container = document.querySelector('.js-navigation-container, .TimelineItem-body');
-  if (!container || container.hasAttribute(COMMIT_QUALITY_ATTR)) return;
-  container.setAttribute(COMMIT_QUALITY_ATTR, 'true');
-
-  const commitLinks = Array.from(document.querySelectorAll('a.Link--primary.text-bold, a.markdown-title'));
-  if (!commitLinks.length) return;
-
-  let good = 0;
-  let total = 0;
-
-  commitLinks.forEach((link) => {
-    if (link.querySelector('.gh-commit-quality-icon')) return;
-    const text = (link.textContent || '').trim();
-    if (!text) return;
-    total += 1;
-
-    const quality = evaluateCommitQuality(text);
-    if (quality === 'neutral') return;
-
-    if (quality === 'good') good += 1;
-
-    const icon = document.createElement('span');
-    icon.className = `gh-commit-quality-icon is-${quality}`;
-    icon.textContent = quality === 'good' ? 'âœ…' : 'âš ï¸';
-    icon.title = quality === 'good'
-      ? 'Good commit message format'
-      : 'Poor commit message - consider using conventional commits';
-    link.appendChild(icon);
-  });
-
-  if (total > 5 && !document.querySelector('.gh-commit-quality-summary')) {
-    const summary = document.createElement('div');
-    summary.className = 'gh-commit-quality-summary';
-    const percent = total ? Math.round((good / total) * 100) : 0;
-    summary.textContent = `Commit quality: ${good}/${total} good messages (${percent}%)`;
-
-    const anchor = document.querySelector('.commits-listing, .js-navigation-container') || container;
-    anchor.insertAdjacentElement('beforebegin', summary);
-  }
-}
-
-function evaluateCommitQuality(message) {
-  const lower = message.toLowerCase();
-  const badWords = ['fix', 'update', 'wip', 'test', 'misc'];
-  if (badWords.includes(lower)) return 'bad';
-  if (message.length < 10) return 'bad';
-  if (/^[0-9\W_]+$/.test(message)) return 'bad';
-  if (message.endsWith('...')) return 'bad';
-  if (/^[a-z]+$/.test(message) && message.split(' ').length === 1) return 'bad';
-
-  if (/^(feat|fix|docs|chore|refactor|test|style|perf|ci|build)(\([^)]+\))?:/.test(lower)) return 'good';
-  if (message.length >= 20 && message.length <= 72 && message.split(' ').length >= 3) return 'good';
-
-  return 'neutral';
-}
-
-function startObserver() {
-  stopObserver();
-  observer = new MutationObserver(() => {
-    if (location.href !== lastUrl) {
-      lastUrl = location.href;
-      stopObserver();
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        cleanupAllBadges();
-        scanPage();
-        startObserver();
-      }, 600);
-      return;
-    }
-
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(scanPage, 300);
-  });
-
-  observer.observe(document.documentElement, { childList: true, subtree: true });
-}
-
-function stopObserver() {
-  if (observer) {
-    observer.disconnect();
-    observer = null;
-  }
-}
-
-function sendMessage(message) {
-  return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(message, (response) => {
-      if (chrome.runtime.lastError) {
-        const error = new Error(chrome.runtime.lastError.message || 'UNKNOWN_RUNTIME_ERROR');
-        if (isExpectedRuntimeError(error)) {
-          resolve({ success: false, error: error.message });
-          return;
-        }
-        reject(error);
-        return;
-      }
-      resolve(response);
-    });
-  });
-}
-
-function isExpectedRuntimeError(error) {
-  const message = error instanceof Error ? error.message : String(error || '');
-  return message.includes('Extension context invalidated')
-    || message.includes('Receiving end does not exist');
-}
-
-function getBadgesHiddenState() {
-  return new Promise((resolve) => {
-    chrome.storage.local.get('badges_hidden', (result) => resolve(Boolean(result.badges_hidden)));
-  });
-}
-
-function getColorClass(score) {
-  if (score >= 7) return 'green';
-  if (score >= 4) return 'yellow';
-  return 'red';
-}
-
-function buildSparklineSvg(scores, colorClass) {
-  const width = 80;
-  const height = 24;
-  const padding = 2;
-  const min = Math.min(...scores);
-  const max = Math.max(...scores);
-  const range = max - min || 1;
-  const points = scores.map((value, index) => {
-    const x = padding + (index / (scores.length - 1)) * (width - padding * 2);
-    const y = height - padding - ((value - min) / range) * (height - padding * 2);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  });
-  const stroke = colorClass === 'green' ? '#238636' : colorClass === 'yellow' ? '#d29922' : '#da3633';
-  return `<svg class="gh-health-sparkline" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><polyline points="${points.join(' ')}" stroke="${stroke}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
-}
-
-function formatLicenseShortName(name, key) {
-  if (name) {
-    return name.replace(' License', '').replace('GNU ', '');
-  }
-  return (key || '').toUpperCase();
-}
-
-function stripTrailingZero(value) {
-  const num = Number(value);
-  if (!Number.isFinite(num)) return '0';
-  return Number.isInteger(num) ? String(num) : String(num);
-}
-
-function safeNonNegative(value) {
-  const num = Number(value);
-  if (!Number.isFinite(num) || num < 0) return 0;
-  return Math.round(num);
-}
-
-function sanitizeNumber(value) {
-  const num = Number(value);
-  if (!Number.isFinite(num) || num < 0) return '0';
-  return stripTrailingZero(num);
-}
-
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function countWords(text) {
-  return (text.trim().match(/\S+/g) || []).length;
-}
-
-function formatBytes(bytes) {
-  const b = Math.max(0, Number(bytes) || 0);
-  if (b >= 1024 * 1024) return `${(b / (1024 * 1024)).toFixed(1)} MB`;
-  if (b >= 1024) return `${Math.round(b / 1024)} KB`;
-  return `${b} B`;
-}
-
-function weekdayName(day) {
-  return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][day] || 'Sunday';
-}
-
-function formatShortDate(dateIso) {
-  const d = new Date(dateIso);
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
-function formatMonthYear(ts) {
-  const d = new Date(ts);
-  return d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
-}
-
-function formatCompact(value) {
-  const n = Number(value) || 0;
-  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}m`;
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-  return String(n);
-}
-
-function capitalize(value) {
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
 async function injectMarkdownPrintButton() {
   if (document.body.hasAttribute('data-md-print-done')) return;
 
@@ -1882,37 +1194,113 @@ async function injectMarkdownPrintButton() {
 async function injectReadmePagePrintButton() {
   if (document.body.hasAttribute('data-readme-print-done')) return;
   if (/\/blob\//.test(location.pathname)) return;
-
-  const readmeSection = document.querySelector('#readme');
-  if (!readmeSection) return;
-
-  const markdownBody = readmeSection.querySelector('article.markdown-body, .markdown-body');
-  if (!markdownBody) return;
-
-  const toolbar =
-    readmeSection.querySelector('.file-actions') ||
-    readmeSection.querySelector('.Box-header .d-flex.flex-justify-end') ||
-    readmeSection.querySelector('.d-flex.flex-justify-end') ||
-    readmeSection.querySelector('.BtnGroup');
-  if (!toolbar) return;
-  if (toolbar.querySelector('.gh-md-print-btn')) {
+  if (document.querySelector('.gh-md-print-btn')) {
     document.body.setAttribute('data-readme-print-done', 'true');
     return;
+  }
+
+  // Find the README section — try multiple strategies since GitHub changes DOM often
+  const readmeSection =
+    document.querySelector('#readme') ||
+    document.querySelector('[data-testid="readme"]') ||
+    document.querySelector('[data-testid="readme-panel"]');
+
+  // Find the markdown body (the README content)
+  let markdownBody = null;
+  if (readmeSection) {
+    markdownBody = readmeSection.querySelector('article.markdown-body, .markdown-body');
+  }
+  // If no #readme container, look for a standalone .markdown-body on repo root pages
+  if (!markdownBody) {
+    const allMd = document.querySelectorAll('article.markdown-body, .markdown-body');
+    for (const md of allMd) {
+      // Skip blob-view markdown bodies
+      if (md.closest('[data-testid="blob-viewer"]') || md.closest('.blob-wrapper')) continue;
+      markdownBody = md;
+      break;
+    }
+  }
+  if (!markdownBody) return;
+
+  // Find the header/toolbar row that contains the pen icon
+  // In modern GitHub, look for the row that has "README" nav links + icon buttons
+  // It's typically a sibling or ancestor of the markdown body container
+  let headerRow = null;
+  let penButton = null;
+
+  // Strategy 1: Walk up from markdownBody looking for a container that has the pen icon
+  let container = markdownBody.parentElement;
+  for (let i = 0; i < 5 && container; i++) {
+    // Look for edit links/buttons
+    penButton =
+      container.querySelector('a[aria-label*="Edit" i]') ||
+      container.querySelector('button[aria-label*="Edit" i]') ||
+      container.querySelector('a[href*="/edit/"]') ||
+      container.querySelector('svg.octicon-pencil')?.closest('a, button');
+    if (penButton && !markdownBody.contains(penButton)) break;
+    penButton = null;
+
+    // Scan SVG paths for pencil icon
+    for (const pathEl of container.querySelectorAll('svg path')) {
+      if (markdownBody.contains(pathEl)) continue;
+      const d = pathEl.getAttribute('d') || '';
+      if (d.includes('M11.013') || d.includes('m11.013')) {
+        penButton = pathEl.closest('svg').closest('a, button') || pathEl.closest('svg').parentElement;
+        break;
+      }
+    }
+    if (penButton) break;
+
+    container = container.parentElement;
   }
 
   document.body.setAttribute('data-readme-print-done', 'true');
 
   const btn = document.createElement('button');
   btn.type = 'button';
-  btn.className = 'gh-md-print-btn btn btn-sm';
-  btn.textContent = 'Print';
+  btn.className = 'gh-md-print-btn';
   btn.title = 'Print this README';
-
-  btn.addEventListener('click', () => {
+  btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M4 1h8a1 1 0 0 1 1 1v2H3V2a1 1 0 0 1 1-1Zm-3 5a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-1v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2H2a1 1 0 0 1-1-1V6Zm3 4v3h8v-3H4Zm7-3.5a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Z"/></svg>';
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     printGitHubMarkdownPage(markdownBody);
   });
 
-  toolbar.insertBefore(btn, toolbar.firstChild);
+  // Insert before the pen icon if found
+  if (penButton) {
+    penButton.parentElement.insertBefore(btn, penButton);
+    return;
+  }
+
+  // Strategy 2: Find the header row by looking at siblings above the markdown body
+  const mdParent = markdownBody.parentElement;
+  if (mdParent) {
+    for (const sibling of mdParent.children) {
+      if (sibling === markdownBody || sibling.contains(markdownBody)) continue;
+      // Check if this sibling has SVG icon buttons (pen, list icons)
+      const iconLinks = [];
+      sibling.querySelectorAll('a, button').forEach((el) => {
+        if (el.querySelector('svg') && !markdownBody.contains(el)) iconLinks.push(el);
+      });
+      if (iconLinks.length > 0) {
+        // Insert before the first icon (pen icon comes first)
+        iconLinks[0].parentElement.insertBefore(btn, iconLinks[0]);
+        return;
+      }
+      // Check if this looks like a README nav row (has "README" text)
+      if (/README/i.test(sibling.textContent) && sibling.querySelector('nav, a')) {
+        sibling.appendChild(btn);
+        return;
+      }
+    }
+  }
+
+  // Strategy 3: absolute position above the markdown content
+  const posRef = (readmeSection || markdownBody.parentElement || markdownBody);
+  posRef.style.position = 'relative';
+  btn.style.cssText = 'position:absolute;right:48px;top:8px;z-index:10;';
+  posRef.insertBefore(btn, posRef.firstChild);
 }
 
 function printGitHubMarkdownPage(markdownBody) {
@@ -2424,16 +1812,62 @@ async function injectVSCodeFileIcons(owner, repo) {
 
 // â”€â”€ FEATURE 2: Open in Web IDE Button â”€â”€
 
-async function injectOpenInWebIDE(owner, repo) {
-  if (document.body.hasAttribute('data-webide-done')) return;
+async function injectOpenInWebIDE(owner, repo, _retries) {
+  _retries = _retries || 0;
+  if (document.querySelector('.gh-webide-wrap')) return;
   if (!/^\/[^/]+\/[^/]+(\/tree\/|$|\/$)/.test(location.pathname)) return;
 
-  const codeBtn = document.querySelector('[data-testid="CodeButton"], get-repo summary');
-  if (!codeBtn) return;
-  const parent = codeBtn.closest('div')?.parentNode || codeBtn.parentNode;
-  if (!parent || parent.querySelector('.gh-webide-wrap')) return;
+  // Try multiple strategies to find the Code button
+  let codeBtn = document.querySelector(
+    '[data-testid="CodeButton"],' +
+    'get-repo summary,' +
+    '[data-action="click:get-repo#showPanel"]'
+  );
 
-  document.body.setAttribute('data-webide-done', 'true');
+  // Fallback: find a button/summary whose visible text contains "Code" in the repo action bar
+  if (!codeBtn) {
+    const candidates = document.querySelectorAll('button, summary, a.btn, a[class*="btn"]');
+    for (const el of candidates) {
+      const text = el.textContent.trim().replace(/\s+/g, ' ');
+      if (/^(<>)?\s*Code\s*$/.test(text)) {
+        // Make sure it's in the repo header area, not navigation
+        const rect = el.getBoundingClientRect();
+        if (rect.top > 100 && rect.top < 600) {
+          codeBtn = el;
+          break;
+        }
+      }
+    }
+  }
+
+  // Find the right parent container to insert next to
+  let parent = null;
+  let insertRef = null;
+  if (codeBtn) {
+    // Walk up to find the flex container holding the action buttons
+    insertRef = codeBtn.closest('react-partial, details, div.d-flex, div.BtnGroup, div') || codeBtn;
+    parent = insertRef.parentNode;
+  }
+
+  // Fallback: look for the row containing branch selector + action buttons
+  if (!parent) {
+    const branchSelector = document.querySelector('[data-hotkey="w"], #branch-select-menu, .branch-select-menu, react-branch-filter-ref');
+    if (branchSelector) {
+      const row = branchSelector.closest('.d-flex, .file-navigation, div[class*="react-code-view"]');
+      if (row) {
+        parent = row;
+        insertRef = null;
+      }
+    }
+  }
+
+  // Retry up to 5 times with increasing delay if we can't find the insertion point
+  if (!parent) {
+    if (_retries < 5) {
+      setTimeout(() => injectOpenInWebIDE(owner, repo, _retries + 1), 500 * (_retries + 1));
+    }
+    return;
+  }
 
   const wrap = document.createElement('div');
   wrap.className = 'gh-webide-wrap';
@@ -2447,15 +1881,15 @@ async function injectOpenInWebIDE(owner, repo) {
   dropdown.className = 'gh-webide-dropdown';
 
   const options = [
-    { label: 'CodeSandbox', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 6l10-4 10 4v12l-10 4L2 18V6zm2 1.5v9l8 3.2 8-3.2v-9l-8-3.2-8 3.2zM12 5.3L6.5 7.5 12 9.7l5.5-2.2L12 5.3z"/></svg>', url: () => `https://codesandbox.io/p/github/${owner}/${repo}` },
-    { label: 'GitHub1s', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>', url: () => `https://github1s.com/${owner}/${repo}` },
-    { label: 'Repl.it', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 2h8v6H6v4H2V2zm0 10h4v4h4v6H2V12zm10 4h4V10h-4V6h4V2h6v8h-4v4h4v8h-6v-4h-4v-2z"/></svg>', url: () => `https://replit.com/github/${owner}/${repo}` },
-    { label: 'Gitpod', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.07 21.25l8.5-14.72H12L3.5 21.25h2.57zM20.5 9.25h-2.57l-8.5 14.72H12l8.5-14.72z"/></svg>', url: () => `https://gitpod.io/#https://github.com/${owner}/${repo}` },
-    { label: 'StackBlitz', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M10.796 2L2 13.5h8.5L7.296 22 22 10.5h-8.5L17 2z"/></svg>', url: () => `https://stackblitz.com/github/${owner}/${repo}` },
+    { label: 'CodeSandbox', icon: '<svg width="16" height="16" viewBox="0 0 256 296" fill="none"><path d="M115.498 261.088v-106.61L23.814 101.73v60.773l41.996 24.347v45.7l49.688 28.538zm23.814.627l50.605-29.072V185.99l42.269-24.495v-60.011l-92.874 53.09v106.82zm80.66-180.46l-48.817-28.289-42.863 24.872-43.188-24.897-49.252 28.667 91.914 52.882 92.206-53.235zM0 222.212V74.495L127.987 0 256 74.182v147.797l-128.013 73.744L0 222.212z" fill="currentColor"/></svg>', url: () => `https://codesandbox.io/p/github/${owner}/${repo}` },
+    { label: 'GitHub1s', icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>', url: () => `https://github1s.com/${owner}/${repo}` },
+    { label: 'Replit', icon: '<svg width="16" height="16" viewBox="0 0 32 32" fill="none"><path d="M7 5.5C7 4.67 7.67 4 8.5 4h15c.83 0 1.5.67 1.5 1.5v7c0 .83-.67 1.5-1.5 1.5h-15C7.67 14 7 13.33 7 12.5v-7zm0 14C7 18.67 7.67 18 8.5 18h15c.83 0 1.5.67 1.5 1.5v7c0 .83-.67 1.5-1.5 1.5h-15C7.67 28 7 27.33 7 26.5v-7z" fill="#F26522"/><path d="M7 12.5C7 11.67 7.67 11 8.5 11H16v10H8.5C7.67 21 7 20.33 7 19.5v-7z" fill="#F26522"/></svg>', url: () => `https://replit.com/github/${owner}/${repo}` },
+    { label: 'Gitpod', icon: '<svg width="16" height="16" viewBox="0 0 32 32" fill="none"><path d="M18.92 2.72l-9.84 17.07h4.62l-1.78 9.49L21.76 12.2h-4.62l1.78-9.48z" fill="#FFAE33"/><path d="M18.92 2.72l-9.84 17.07h4.62l-1.78 9.49L21.76 12.2h-4.62l1.78-9.48z" fill="#FFAE33"/></svg>', url: () => `https://gitpod.io/#https://github.com/${owner}/${repo}` },
+    { label: 'StackBlitz', icon: '<svg width="16" height="16" viewBox="0 0 28 28" fill="none"><path d="M12.747 16.273h-7.46L18.925 1.5l-3.672 10.227h7.46L9.075 26.5l3.672-10.227z" fill="#1389FD"/></svg>', url: () => `https://stackblitz.com/github/${owner}/${repo}` },
     { type: 'divider' },
-    { label: 'Clone in VS Code', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="#007acc"><path d="M17.5 0L9 9.5 3.5 5 0 7l9 9L24 3z"/></svg>', url: () => `vscode://vscode.git/clone?url=${encodeURIComponent('https://github.com/' + owner + '/' + repo + '.git')}` },
-    { label: 'Clone in Cursor', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="#9333ea"><circle cx="12" cy="12" r="10"/><path d="M8 12l4-4 4 4-4 4z" fill="#fff"/></svg>', url: () => `cursor://vscode.git/clone?url=${encodeURIComponent('https://github.com/' + owner + '/' + repo + '.git')}` },
-    { label: 'Clone in Windsurf', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="#0ea5e9"><path d="M12 2L2 19h20L12 2zm0 4l7 11H5l7-11z"/></svg>', url: () => `windsurf://vscode.git/clone?url=${encodeURIComponent('https://github.com/' + owner + '/' + repo + '.git')}` }
+    { label: 'Clone in VSCode', icon: '<svg width="16" height="16" viewBox="0 0 100 100" fill="none"><mask id="a" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><path d="M70.911 99.069a6.04 6.04 0 004.191-.638l19.735-9.47a6.04 6.04 0 003.163-5.304V16.343a6.04 6.04 0 00-3.163-5.303L75.102 1.569a6.04 6.04 0 00-6.882 1.04L29.395 38.22 12.21 25.543a4.028 4.028 0 00-5.145.263L2.289 30.2a4.03 4.03 0 00-.003 5.996L16.675 50 2.286 63.804a4.032 4.032 0 00.003 5.996l4.776 4.395a4.028 4.028 0 005.145.263l17.186-12.676 38.824 35.612a6.02 6.02 0 002.691 1.695zM75.015 27.241L45.109 50l29.906 22.76V27.24z" fill="#fff"/></mask><g mask="url(#a)"><path d="M96.837 10.911L75.097 1.568a6.04 6.04 0 00-6.887 1.04L2.286 63.804a4.03 4.03 0 00.003 5.996l4.776 4.395a4.027 4.027 0 005.145.263L96.574 15.69a6.04 6.04 0 00.263-4.779z" fill="#0065A9"/><g filter="url(#b)"><path d="M96.837 89.089L75.097 98.43a6.04 6.04 0 01-6.887-1.04L2.286 36.196a4.031 4.031 0 01.003-5.996l4.776-4.395a4.027 4.027 0 015.145-.262l84.364 58.768a6.04 6.04 0 01.263 4.778z" fill="#007ACC"/></g><g filter="url(#c)"><path d="M75.097 98.432a6.04 6.04 0 01-6.887-1.04c2.299 2.3 6.204.672 6.204-2.584V5.192c0-3.256-3.905-4.884-6.204-2.584a6.04 6.04 0 016.887-1.04l19.735 9.471A6.04 6.04 0 0198 16.343v67.314a6.04 6.04 0 01-3.168 5.304L75.097 98.432z" fill="#1F9CF0"/></g></g></svg>', url: () => `vscode://vscode.git/clone?url=${encodeURIComponent('https://github.com/' + owner + '/' + repo + '.git')}` },
+    { label: 'Clone in Cursor', icon: '<svg width="16" height="16" viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="20" fill="#000"/><path d="M30 70V30l40 20-40 20z" fill="#fff"/></svg>', url: () => `cursor://vscode.git/clone?url=${encodeURIComponent('https://github.com/' + owner + '/' + repo + '.git')}` },
+    { label: 'Clone in Windsurf', icon: '<svg width="16" height="16" viewBox="0 0 32 32" fill="none"><path d="M16 3C8.82 3 3 8.82 3 16s5.82 13 13 13 13-5.82 13-13S23.18 3 16 3zm-2 18.5l-5-5 1.41-1.41L14 18.67l7.59-7.59L23 12.5l-9 9z" fill="#0EA5E9"/></svg>', url: () => `windsurf://vscode.git/clone?url=${encodeURIComponent('https://github.com/' + owner + '/' + repo + '.git')}` }
   ];
 
   options.forEach((opt) => {
@@ -2488,7 +1922,11 @@ async function injectOpenInWebIDE(owner, repo) {
 
   wrap.appendChild(btn);
   wrap.appendChild(dropdown);
-  parent.insertBefore(wrap, codeBtn.closest('div, details') || codeBtn);
+  if (insertRef && insertRef.nextSibling) {
+    parent.insertBefore(wrap, insertRef.nextSibling);
+  } else {
+    parent.appendChild(wrap);
+  }
 }
 
 // â”€â”€ FEATURE 3: Lines of Code in Sidebar â”€â”€
@@ -3168,17 +2606,9 @@ async function injectHealthSidebarPanel(owner, repo) {
 
 function cleanupAllBadges() {
   document.querySelectorAll('.gh-health-badge').forEach((badge) => badge.remove());
-  document.querySelectorAll('.eg-download, .eg-repo-size, .js-file-clipboard, .js-file-download, .js-enhanced-github-copy-btn, .gh-md-print-btn, .gh-readme-toc, .gh-pr-complexity, .gh-todo-summary, .gh-insights-panel, .gh-issues-summary, .gh-quick-clone-wrap, .gh-star-history, .gh-commit-quality-summary, .gh-webide-wrap, .gh-loc-stat-row, .gh-loc-modal-backdrop, .gh-health-sidebar-panel, .gh-abs-date-span').forEach((node) => node.remove());
-  document.querySelectorAll('[data-health-done], [data-toc-done], [data-pr-complexity-done], [data-todo-done], [data-insights-done], [data-issues-age-done], [data-clone-done], [data-star-history-done], [data-commit-quality-done], [data-bookmark-done], [data-md-print-done], [data-readme-print-done], [data-vsicons-done], [data-vsicon-row], [data-vsicon], [data-webide-done], [data-loc-sidebar-done], [data-health-panel-done], [data-abs-converted], [data-abs-hidden]').forEach((element) => {
+  document.querySelectorAll('.eg-download, .eg-repo-size, .js-file-clipboard, .js-file-download, .js-enhanced-github-copy-btn, .gh-md-print-btn, .gh-webide-wrap, .gh-loc-stat-row, .gh-loc-modal-backdrop, .gh-health-sidebar-panel, .gh-abs-date-span').forEach((node) => node.remove());
+  document.querySelectorAll('[data-health-done], [data-bookmark-done], [data-md-print-done], [data-readme-print-done], [data-vsicons-done], [data-vsicon-row], [data-vsicon], [data-webide-done], [data-loc-sidebar-done], [data-health-panel-done], [data-abs-converted], [data-abs-hidden]').forEach((element) => {
     element.removeAttribute('data-health-done');
-    element.removeAttribute('data-toc-done');
-    element.removeAttribute('data-pr-complexity-done');
-    element.removeAttribute('data-todo-done');
-    element.removeAttribute('data-insights-done');
-    element.removeAttribute('data-issues-age-done');
-    element.removeAttribute('data-clone-done');
-    element.removeAttribute('data-star-history-done');
-    element.removeAttribute('data-commit-quality-done');
     element.removeAttribute('data-bookmark-done');
     element.removeAttribute('data-md-print-done');
     element.removeAttribute('data-readme-print-done');

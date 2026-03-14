@@ -1,7 +1,5 @@
 const CACHE_TTL_HEALTH = 6 * 60 * 60 * 1000;
 const CACHE_TTL_DEPS = 24 * 60 * 60 * 1000;
-const CACHE_TTL_PR = 60 * 60 * 1000;
-const CACHE_TTL_STAR_HISTORY = 12 * 60 * 60 * 1000;
 const CACHE_TTL_LOC = 24 * 60 * 60 * 1000;
 const CACHE_TTL_NOTIFICATIONS = 5 * 60 * 1000;
 const MAX_HISTORY = 10;
@@ -20,20 +18,8 @@ const BOOKMARKS_KEY = 'bookmarks';
 const BADGES_HIDDEN_KEY = 'badges_hidden';
 
 const DEFAULT_SETTINGS = {
-  showOnSearch: true,
-  showOnTrending: true,
-  showDeps: true,
   showBusFactor: true,
   showLicenseRisk: true,
-  showReadmeToc: true,
-  showPrComplexity: true,
-  showTodoHighlights: true,
-  showContributionInsights: true,
-  showIssueAge: true,
-  showFileTypeIcons: true,
-  showQuickClone: true,
-  showStarHistory: true,
-  showCommitQuality: true,
   showFileEnhancements: true,
   showMarkdownPrinter: true,
   showVSIcons: true,
@@ -50,9 +36,12 @@ const COPYLEFT_LICENSES = new Set([
   'gpl-2.0', 'gpl-3.0', 'lgpl-2.0', 'lgpl-2.1', 'lgpl-3.0', 'agpl-3.0'
 ]);
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener((details) => {
   ensureDefaults().catch(logError);
   chrome.alarms.create('watchlist-check', { periodInMinutes: 360 });
+  if (details.reason === 'install') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('onboarding.html') });
+  }
 });
 
 chrome.runtime.onStartup.addListener(() => {
@@ -155,16 +144,6 @@ async function routeMessage(message, sender) {
       await clearCachedData();
       return {};
     }
-    case 'GET_PR_COMPLEXITY': {
-      const payload = message.payload || {};
-      const data = await getPrComplexity(payload.owner, payload.repo, payload.number);
-      return { data };
-    }
-    case 'GET_STAR_HISTORY': {
-      const payload = message.payload || {};
-      const data = await getStarHistory(payload.owner, payload.repo, payload.totalStars);
-      return { data };
-    }
     case 'GET_LOC': {
       const payload = message.payload || {};
       const data = await getLocData(payload.owner, payload.repo);
@@ -234,8 +213,7 @@ async function handleHealthRequest(owner, repo, options) {
   }
 
   const rawData = await fetchRepoData(owner, repo);
-  const deps = await getDependencyRisk(owner, repo);
-  const healthData = calculateHealthScore(rawData, deps);
+  const healthData = calculateHealthScore(rawData, null);
 
   await setCached(cacheKey, healthData);
   await appendHistory(owner, repo, healthData.score);
@@ -562,290 +540,6 @@ function calculateHealthScore(rawData, deps) {
     ageLabel: rawData.ageLabel,
     scannedAt: Date.now()
   };
-}
-
-async function getDependencyRisk(owner, repo) {
-  const cacheKey = `deps_${owner}_${repo}`;
-  const cached = await getCached(cacheKey, CACHE_TTL_DEPS);
-  if (cached !== null) {
-    return cached;
-  }
-
-  try {
-    const pkgJson = await fetchPackageJson(owner, repo);
-    if (!pkgJson) {
-      await setCached(cacheKey, null);
-      return null;
-    }
-
-    const allDeps = Object.assign({}, pkgJson.dependencies || {}, pkgJson.devDependencies || {});
-    const depNames = Object.keys(allDeps).slice(0, DEP_CHECK_LIMIT);
-    if (depNames.length === 0) {
-      await setCached(cacheKey, null);
-      return null;
-    }
-
-    const results = await Promise.allSettled(depNames.map((name) => auditPackage(name)));
-    let vulnerableCount = 0;
-    let outdatedCount = 0;
-    const checkedPackages = [];
-
-    for (const result of results) {
-      if (result.status !== 'fulfilled' || !result.value) continue;
-      checkedPackages.push(result.value);
-      if (result.value.hasVulns) vulnerableCount += 1;
-      if (result.value.isOutdated) outdatedCount += 1;
-    }
-
-    let riskLabel = 'Clean';
-    if (vulnerableCount >= 2) riskLabel = 'High Risk';
-    else if (vulnerableCount === 1 || outdatedCount >= 3) riskLabel = 'Medium';
-    else if (outdatedCount >= 1) riskLabel = 'Low Risk';
-
-    const deps = {
-      vulnerableCount,
-      outdatedCount,
-      riskLabel,
-      checkedCount: depNames.length,
-      checkedPackages
-    };
-
-    await setCached(cacheKey, deps);
-    return deps;
-  } catch (error) {
-    console.warn('[GH Health] dependency risk failed:', error.message);
-    return null;
-  }
-}
-
-async function fetchPackageJson(owner, repo) {
-  for (const branch of ['main', 'master']) {
-    try {
-      const response = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/package.json`);
-      if (response.ok) {
-        return JSON.parse(await response.text());
-      }
-    } catch (_error) {
-      // noop
-    }
-  }
-  return null;
-}
-
-async function auditPackage(name) {
-  const registryResult = await Promise.resolve(fetch(`https://registry.npmjs.org/${encodeURIComponent(name)}`));
-  const osvResult = await Promise.resolve(fetch('https://api.osv.dev/v1/query', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ package: { name, ecosystem: 'npm' } })
-  }));
-
-  let isOutdated = false;
-  try {
-    if (registryResult.ok) {
-      const data = await registryResult.json();
-      const modified = data && data.time && data.time.modified;
-      if (modified) {
-        const daysSince = (Date.now() - new Date(modified).getTime()) / 86400000;
-        isOutdated = daysSince > 365;
-      }
-    }
-  } catch (_error) {
-    isOutdated = false;
-  }
-
-  let hasVulns = false;
-  try {
-    if (osvResult.ok) {
-      const osvData = await osvResult.json();
-      hasVulns = Array.isArray(osvData.vulns) && osvData.vulns.length > 0;
-    }
-  } catch (_error) {
-    hasVulns = false;
-  }
-
-  return { name, isOutdated, hasVulns };
-}
-
-async function getPrComplexity(owner, repo, number) {
-  const num = Number(number);
-  if (!Number.isFinite(num)) {
-    throw new Error('INVALID_PR');
-  }
-  const cacheKey = `pr_${owner}_${repo}_${num}`;
-  const cached = await getCached(cacheKey, CACHE_TTL_PR);
-  if (cached) return cached;
-
-  const headers = await buildGitHubHeaders();
-  const response = await trackedGitHubFetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${num}/files?per_page=100`, headers);
-  if (!response.ok) {
-    throw new Error('PR_FETCH_FAILED');
-  }
-  const files = await response.json();
-  const safeFiles = Array.isArray(files) ? files : [];
-
-  let totalAdditions = 0;
-  let totalDeletions = 0;
-  let testFileCount = 0;
-  const extensionCounts = {};
-
-  safeFiles.forEach((file) => {
-    const additions = Number(file.additions) || 0;
-    const deletions = Number(file.deletions) || 0;
-    totalAdditions += additions;
-    totalDeletions += deletions;
-
-    const filename = file.filename || '';
-    if (/__tests__\/|\.test\.|\.spec\.|_test\.|test_/i.test(filename)) {
-      testFileCount += 1;
-    }
-
-    const ext = getFileExtensionLabel(filename);
-    extensionCounts[ext] = (extensionCounts[ext] || 0) + 1;
-  });
-
-  const totalFiles = safeFiles.length;
-  const totalChanges = totalAdditions + totalDeletions;
-  const sourceFileCount = Math.max(0, totalFiles - testFileCount);
-  const hasTests = testFileCount > 0;
-  const testRatio = totalFiles > 0 ? Math.round((testFileCount / totalFiles) * 100) : 0;
-
-  let complexity = 'massive';
-  if (totalFiles <= 5 && totalChanges <= 100) complexity = 'simple';
-  else if (totalFiles <= 15 && totalChanges <= 500) complexity = 'moderate';
-  else if (totalFiles <= 30 && totalChanges <= 1000) complexity = 'large';
-
-  const extensionBreakdown = Object.keys(extensionCounts)
-    .sort((a, b) => extensionCounts[b] - extensionCounts[a])
-    .map((ext) => ({ extension: ext, count: extensionCounts[ext] }));
-
-  const payload = {
-    totalFiles,
-    totalAdditions,
-    totalDeletions,
-    totalChanges,
-    testFileCount,
-    sourceFileCount,
-    hasTests,
-    testRatio,
-    complexity,
-    extensionBreakdown,
-    scannedAt: Date.now()
-  };
-
-  await setCached(cacheKey, payload);
-  return payload;
-}
-
-async function getStarHistory(owner, repo) {
-  const cacheKey = `star_history_${owner}_${repo}`;
-  const cached = await getCached(cacheKey, CACHE_TTL_STAR_HISTORY);
-  if (cached) return cached;
-
-  const headers = await buildGitHubHeaders();
-  headers.Accept = 'application/vnd.github.v3.star+json';
-
-  let totalStars = 0;
-  let criticalFailed = false;
-
-  try {
-    const repoResponse = await trackedGitHubFetch(`https://api.github.com/repos/${owner}/${repo}`, await buildGitHubHeaders());
-    if (!repoResponse.ok) {
-      criticalFailed = true;
-    } else {
-      const repoData = await repoResponse.json();
-      totalStars = Number(repoData.stargazers_count) || 0;
-    }
-  } catch (_error) {
-    criticalFailed = true;
-  }
-
-  let firstBatch = [];
-  let middleBatch = [];
-  let lastBatch = [];
-  let lastPage = 1;
-
-  try {
-    const page1 = await trackedGitHubFetch(`https://api.github.com/repos/${owner}/${repo}/stargazers?per_page=100&page=1`, headers);
-    if (!page1.ok) {
-      criticalFailed = true;
-    } else {
-      firstBatch = await page1.json();
-      const linkHeader = page1.headers.get('Link') || '';
-      lastPage = parseLastPage(linkHeader);
-    }
-  } catch (_error) {
-    criticalFailed = true;
-  }
-
-  const midPage = Math.max(1, Math.floor(lastPage / 2));
-  if (midPage > 1) {
-    try {
-      const midResponse = await trackedGitHubFetch(`https://api.github.com/repos/${owner}/${repo}/stargazers?per_page=100&page=${midPage}`, headers);
-      if (midResponse.ok) middleBatch = await midResponse.json();
-    } catch (_error) {
-      middleBatch = [];
-    }
-  }
-  if (lastPage > 1) {
-    try {
-      const lastResponse = await trackedGitHubFetch(`https://api.github.com/repos/${owner}/${repo}/stargazers?per_page=100&page=${lastPage}`, headers);
-      if (lastResponse.ok) lastBatch = await lastResponse.json();
-    } catch (_error) {
-      lastBatch = [];
-    }
-  }
-
-  const allSample = []
-    .concat(Array.isArray(firstBatch) ? firstBatch : [])
-    .concat(Array.isArray(middleBatch) ? middleBatch : [])
-    .concat(Array.isArray(lastBatch) ? lastBatch : []);
-
-  const sampleDates = allSample
-    .map((item) => new Date(item.starred_at).getTime())
-    .filter((value) => Number.isFinite(value))
-    .sort((a, b) => a - b);
-
-  const firstStarTs = sampleDates.length ? sampleDates[0] : null;
-  const now = Date.now();
-  const daysSpan = firstStarTs ? Math.max(1, Math.round((now - firstStarTs) / 86400000)) : null;
-  const monthlyGrowth = daysSpan ? Math.round((totalStars / daysSpan) * 30) : null;
-
-  let points = [];
-  if (sampleDates.length > 0) {
-    const startTs = sampleDates[0];
-    const span = Math.max(1, now - startTs);
-    points = Array.from({ length: 5 }, (_, i) => {
-      const threshold = startTs + Math.round((span * i) / 4);
-      const sampledCount = sampleDates.filter((ts) => ts <= threshold).length;
-      const ratio = sampleDates.length ? sampledCount / sampleDates.length : 0;
-      return { x: i, y: Math.max(0, Math.round(totalStars * ratio)) };
-    });
-  } else {
-    for (let i = 0; i < 5; i += 1) {
-      const ratio = i / 4;
-      const y = Math.max(0, Math.round(totalStars * ratio));
-      points.push({ x: i, y });
-    }
-  }
-
-  const payload = {
-    totalStars,
-    firstStarAt: firstStarTs,
-    firstStarDate: firstStarTs,
-    monthlyGrowth,
-    estimatedMonthlyGrowth: monthlyGrowth,
-    currentTotal: totalStars,
-    points
-  };
-
-  if (criticalFailed) {
-    payload.unavailable = true;
-    payload.error = 'STAR_HISTORY_FAILED';
-  }
-
-  await setCached(cacheKey, payload);
-  return payload;
 }
 
 async function getLocData(owner, repo) {
@@ -1400,7 +1094,6 @@ async function clearCachedData() {
       || key.startsWith('deps_')
       || key.startsWith('history_')
       || key.startsWith('pr_')
-      || key.startsWith('star_history_')
       || key.startsWith('loc_')
       || key === 'notifications_grouped'
       || key === RECENT_SCANS_KEY
@@ -1443,20 +1136,8 @@ async function getSettings() {
   const merged = Object.assign({}, DEFAULT_SETTINGS, legacy || {}, settings || {});
 
   return {
-    showOnSearch: merged.showOnSearch !== false,
-    showOnTrending: merged.showOnTrending !== false,
-    showDeps: merged.showDeps !== false,
     showBusFactor: merged.showBusFactor !== false,
     showLicenseRisk: merged.showLicenseRisk !== false,
-    showReadmeToc: merged.showReadmeToc !== false,
-    showPrComplexity: merged.showPrComplexity !== false,
-    showTodoHighlights: merged.showTodoHighlights !== false,
-    showContributionInsights: merged.showContributionInsights !== false,
-    showIssueAge: merged.showIssueAge !== false,
-    showFileTypeIcons: merged.showFileTypeIcons !== false,
-    showQuickClone: merged.showQuickClone !== false,
-    showStarHistory: merged.showStarHistory !== false,
-    showCommitQuality: merged.showCommitQuality !== false,
     showFileEnhancements: merged.showFileEnhancements !== false,
     showMarkdownPrinter: merged.showMarkdownPrinter !== false,
     showVSIcons: merged.showVSIcons !== false,
@@ -1635,7 +1316,6 @@ function isExpectedError(error) {
     || message === 'RATE_LIMITED'
     || message === 'AUTH_ERROR'
     || message === 'INVALID_REPO'
-    || message === 'STAR_HISTORY_FAILED'
     || message === 'NOTIFICATIONS_FAILED'
     || message.includes('Extension context invalidated')
     || message.includes('Receiving end does not exist');
