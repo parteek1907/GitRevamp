@@ -158,8 +158,9 @@ function handleRepoPage(owner, repo) {
     document.querySelector('main > div h1:first-of-type') ||
     document.querySelector('h1[class*="d-flex"]');
 
-  if (!title || title.hasAttribute(PROCESSED_ATTR)) return;
-  title.setAttribute(PROCESSED_ATTR, 'true');
+  if (!title) return;
+  // Check if badge already exists rather than using attribute on persistent h1
+  if (title.nextElementSibling && title.nextElementSibling.classList.contains('gh-health-badge')) return;
   renderBadgeForTarget(title, owner, repo, 'page');
 }
 
@@ -876,9 +877,6 @@ async function enhancedGithubMainEntry(_owner, _repo) {
   }
 
   const currentUrl = window.location.href;
-  if (enhancedGithubLastUrl === currentUrl) {
-    return;
-  }
   enhancedGithubLastUrl = currentUrl;
   enhancedGithubDomUtil.addRepoData();
 }
@@ -1759,15 +1757,12 @@ function getVSCodeIconUrl(name, isFolder) {
 }
 
 async function injectVSCodeFileIcons(owner, repo) {
-  const isTreeLike = /\/[^/]+\/[^/]+(\/tree\/|\/?)$/.test(location.pathname)
-    && !/\/blob\//.test(location.pathname);
-  if (!isTreeLike) return;
+  if (/\/blob\//.test(location.pathname)) return;
 
   const tree = document.querySelector(
     'table[aria-labelledby="folders-and-files"], [role="grid"]'
   );
-  if (!tree || tree.hasAttribute(VSICONS_ATTR)) return;
-  tree.setAttribute(VSICONS_ATTR, 'true');
+  if (!tree) return;
 
   console.log('[GH Health] Found tree:', tree.tagName, tree.className);
 
@@ -2036,8 +2031,9 @@ async function injectLOCInSidebar(owner, repo) {
 
   console.log('[GH-LOC] sidebar found:', !!sidebar, sidebar?.tagName, sidebar?.className?.substring(0, 80));
 
-  if (!sidebar || sidebar.hasAttribute('data-loc-sidebar-done')) return;
-  sidebar.setAttribute('data-loc-sidebar-done', 'true');
+  if (!sidebar) return;
+  // Check if LOC row already exists instead of attribute on persistent sidebar
+  if (sidebar.querySelector('.gh-loc-stat-row') || document.querySelector('.gh-loc-stat-row')) return;
 
   // Create the LOC item as a list item to match stars/watching/forks format
   var locRow = document.createElement('li');
