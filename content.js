@@ -1,4 +1,4 @@
-const PROCESSED_ATTR = 'data-health-done';
+﻿const PROCESSED_ATTR = 'data-health-done';
 const TOC_ATTR = 'data-toc-done';
 const PR_COMPLEXITY_ATTR = 'data-pr-complexity-done';
 const TODO_ATTR = 'data-todo-done';
@@ -780,7 +780,7 @@ function buildHealthBadge(data, history, context) {
 
   const dot = document.createElement('span');
   dot.className = 'gh-health-dot';
-  dot.textContent = '●';
+  dot.textContent = 'â—';
 
   const score = document.createElement('span');
   score.className = 'gh-health-pill-score';
@@ -823,7 +823,7 @@ function buildExpandedLines(data, history, colorClass, context) {
     const busFactorLine = document.createElement('div');
     busFactorLine.className = 'gh-health-line gh-health-warning';
     const share = sanitizeNumber(data.topContributorShare);
-    busFactorLine.textContent = `⚠️ Single maintainer risk (${share}% of commits by one person)`;
+    busFactorLine.textContent = `âš ï¸ Single maintainer risk (${share}% of commits by one person)`;
     lines.push(busFactorLine);
   }
 
@@ -831,12 +831,12 @@ function buildExpandedLines(data, history, colorClass, context) {
     const depsLine = document.createElement('div');
     depsLine.className = 'gh-health-line';
     if (data.deps.riskLabel === 'Clean') {
-      depsLine.textContent = '📦 Dependencies clean';
+      depsLine.textContent = 'ðŸ“¦ Dependencies clean';
     } else {
       const parts = [];
       if (safeNonNegative(data.deps.outdatedCount) > 0) parts.push(`${safeNonNegative(data.deps.outdatedCount)} deps outdated`);
       if (safeNonNegative(data.deps.vulnerableCount) > 0) parts.push(`${safeNonNegative(data.deps.vulnerableCount)} vuln`);
-      depsLine.textContent = `📦 ${parts.join(' · ')}`;
+      depsLine.textContent = `ðŸ“¦ ${parts.join(' Â· ')}`;
     }
     lines.push(depsLine);
   }
@@ -857,7 +857,7 @@ function buildExpandedLines(data, history, colorClass, context) {
   ) {
     const releaseLine = document.createElement('div');
     releaseLine.className = 'gh-health-line';
-    releaseLine.textContent = `🏷️ ${data.latestVersion} · ${Math.round(Number(data.daysSinceRelease))}d ago`;
+    releaseLine.textContent = `ðŸ·ï¸ ${data.latestVersion} Â· ${Math.round(Number(data.daysSinceRelease))}d ago`;
     lines.push(releaseLine);
   }
 
@@ -876,7 +876,7 @@ function buildExpandedLines(data, history, colorClass, context) {
     const daysSinceLast = safeNonNegative(data.daysSinceLast);
     const fallbackLine = document.createElement('div');
     fallbackLine.className = 'gh-health-line';
-    fallbackLine.textContent = `⭐ ${stars} · 🍴 ${forks} · ${daysSinceLast}d since last commit`;
+    fallbackLine.textContent = `â­ ${stars} Â· ðŸ´ ${forks} Â· ${daysSinceLast}d since last commit`;
     lines.push(fallbackLine);
   }
 
@@ -901,18 +901,18 @@ function buildVelocityText(data) {
     return '';
   }
 
-  return `⚡ Issues ~${stripTrailingZero(normalizedIssue)}d · PRs ~${stripTrailingZero(normalizedPr)}d`;
+  return `âš¡ Issues ~${stripTrailingZero(normalizedIssue)}d Â· PRs ~${stripTrailingZero(normalizedPr)}d`;
 }
 
 function getLicenseBadgeLine(data) {
   if (data.licenseRisk === 'copyleft') {
-    return `⚖️ Copyleft license (${formatLicenseShortName(data.licenseName, data.licenseKey)})`;
+    return `âš–ï¸ Copyleft license (${formatLicenseShortName(data.licenseName, data.licenseKey)})`;
   }
   if (data.licenseRisk === 'unlicensed') {
-    return '⚠️ No license - use with caution';
+    return 'âš ï¸ No license - use with caution';
   }
   if (data.licenseRisk === 'unknown') {
-    return '❓ License unclear';
+    return 'â“ License unclear';
   }
   return null;
 }
@@ -955,7 +955,7 @@ async function injectReadmeToc() {
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'gh-readme-toc-toggle';
-    toggle.textContent = '‹';
+    toggle.textContent = 'â€¹';
 
     const list = document.createElement('div');
     list.className = 'gh-readme-toc-list';
@@ -968,14 +968,14 @@ async function injectReadmeToc() {
 
     toggle.addEventListener('click', () => {
       const collapsed = panel.classList.toggle('is-collapsed');
-      toggle.textContent = collapsed ? '›' : '‹';
+      toggle.textContent = collapsed ? 'â€º' : 'â€¹';
       chrome.storage.local.set({ toc_collapsed: collapsed });
     });
 
     chrome.storage.local.get('toc_collapsed', (result) => {
       const collapsed = Boolean(result.toc_collapsed);
       panel.classList.toggle('is-collapsed', collapsed);
-      toggle.textContent = collapsed ? '›' : '‹';
+      toggle.textContent = collapsed ? 'â€º' : 'â€¹';
     });
   }
 
@@ -1032,7 +1032,7 @@ function injectReadingTime(markdownBody, headings) {
   const mins = Math.max(1, Math.round(words / 200));
   const meta = document.createElement('div');
   meta.className = 'gh-readme-reading-time';
-  meta.textContent = `📖 ~${mins} min read · ${words} words`;
+  meta.textContent = `ðŸ“– ~${mins} min read Â· ${words} words`;
   const firstHeading = headings[0];
   if (firstHeading) {
     firstHeading.parentNode.insertBefore(meta, firstHeading);
@@ -1068,13 +1068,13 @@ async function injectPrComplexity(owner, repo) {
 
   const top = document.createElement('div');
   top.className = 'gh-pr-complexity-main';
-  top.textContent = `[${capitalize(data.complexity)} PR] ${data.totalFiles} files · +${data.totalAdditions} -${data.totalDeletions} lines · ${data.testFileCount} test files (${data.testRatio}%)`;
+  top.textContent = `[${capitalize(data.complexity)} PR] ${data.totalFiles} files Â· +${data.totalAdditions} -${data.totalDeletions} lines Â· ${data.testFileCount} test files (${data.testRatio}%)`;
   banner.appendChild(top);
 
   if (data.complexity === 'massive') {
     const warn = document.createElement('div');
     warn.className = 'gh-pr-complexity-warn';
-    warn.textContent = '⚠️ This PR is too large to review effectively. Consider splitting into smaller PRs.';
+    warn.textContent = 'âš ï¸ This PR is too large to review effectively. Consider splitting into smaller PRs.';
     banner.appendChild(warn);
   }
 
@@ -1216,11 +1216,11 @@ async function injectContributionInsights() {
 
   const panel = document.createElement('div');
   panel.className = 'gh-insights-panel';
-  panel.appendChild(makeInsightCard('🔥 Current streak', `${current} days`));
-  panel.appendChild(makeInsightCard('⚡ Longest streak', `${longest} days`));
-  panel.appendChild(makeInsightCard('📅 Most active', weekdayName(topWeekday ? topWeekday[0] : 0)));
-  panel.appendChild(makeInsightCard('🏆 Best day', `${formatShortDate(best.date)} (${best.count} contributions)`));
-  panel.appendChild(makeInsightCard('📊 Avg active day', `${avgActive.toFixed(1)} contributions`));
+  panel.appendChild(makeInsightCard('ðŸ”¥ Current streak', `${current} days`));
+  panel.appendChild(makeInsightCard('âš¡ Longest streak', `${longest} days`));
+  panel.appendChild(makeInsightCard('ðŸ“… Most active', weekdayName(topWeekday ? topWeekday[0] : 0)));
+  panel.appendChild(makeInsightCard('ðŸ† Best day', `${formatShortDate(best.date)} (${best.count} contributions)`));
+  panel.appendChild(makeInsightCard('ðŸ“Š Avg active day', `${avgActive.toFixed(1)} contributions`));
 
   const anchor = graph.closest('.js-yearly-contributions') || graph;
   anchor.insertAdjacentElement('afterend', panel);
@@ -1285,7 +1285,7 @@ async function injectIssueAge(owner, repo) {
 
     const marker = document.createElement('span');
     marker.className = `gh-issue-age gh-issue-${bucket}`;
-    marker.textContent = `🕐 ${label}`;
+    marker.textContent = `ðŸ• ${label}`;
     row.appendChild(marker);
     buckets[bucket].push(row);
   });
@@ -1295,7 +1295,7 @@ async function injectIssueAge(owner, repo) {
   const summary = document.createElement('div');
   summary.className = 'gh-issues-summary';
   summary.appendChild(document.createTextNode(
-    `${rows.length} open issues: ${buckets.new.length} new · ${buckets.recent.length} recent · ${buckets.aging.length} aging · ${buckets.old.length} old · ${buckets.stale.length} stale`
+    `${rows.length} open issues: ${buckets.new.length} new Â· ${buckets.recent.length} recent Â· ${buckets.aging.length} aging Â· ${buckets.old.length} old Â· ${buckets.stale.length} stale`
   ));
 
   ['new', 'recent', 'aging', 'old', 'stale'].forEach((bucket) => {
@@ -1447,7 +1447,7 @@ async function injectQuickCloneButton(owner, repo) {
       await sendMessage({ type: 'SET_CLONE_PREFERENCE', payload: { preference: item.key } }).catch(() => {});
       panel.classList.remove('is-open');
       const old = button.textContent;
-      button.textContent = '✅ Copied!';
+      button.textContent = 'âœ… Copied!';
       setTimeout(() => {
         button.textContent = old;
       }, 1500);
@@ -1655,7 +1655,7 @@ async function injectCommitQuality() {
 
     const icon = document.createElement('span');
     icon.className = `gh-commit-quality-icon is-${quality}`;
-    icon.textContent = quality === 'good' ? '✅' : '⚠️';
+    icon.textContent = quality === 'good' ? 'âœ…' : 'âš ï¸';
     icon.title = quality === 'good'
       ? 'Good commit message format'
       : 'Poor commit message - consider using conventional commits';
@@ -2024,228 +2024,395 @@ function printGitHubMarkdownPage(markdownBody) {
   }
 }
 
-// ── FEATURE 1: VS Code Material File Icons ──
+// â”€â”€ FEATURE 1: VS Code Material File Icons â”€â”€
 
-const FILE_ICON_MAP = {
-  'package.json':     { text: 'NPM',  bg: '#cc3534', fg: '#fff' },
-  'package-lock.json':{ text: 'NPM',  bg: '#cc3534', fg: '#fff' },
-  'tsconfig.json':    { text: 'TS',   bg: '#3178c6', fg: '#fff' },
-  'jsconfig.json':    { text: 'JS',   bg: '#f7df1e', fg: '#000' },
-  '.eslintrc':        { text: 'ESL',  bg: '#4b32c3', fg: '#fff' },
-  '.eslintrc.js':     { text: 'ESL',  bg: '#4b32c3', fg: '#fff' },
-  '.eslintrc.json':   { text: 'ESL',  bg: '#4b32c3', fg: '#fff' },
-  '.prettierrc':      { text: 'PRE',  bg: '#f7ba3e', fg: '#000' },
-  '.prettierrc.js':   { text: 'PRE',  bg: '#f7ba3e', fg: '#000' },
-  'dockerfile':       { text: 'DO',   bg: '#0db7ed', fg: '#fff' },
-  'docker-compose.yml':{ text: 'DC',  bg: '#0db7ed', fg: '#fff' },
-  '.gitignore':       { text: 'GIT',  bg: '#f54d27', fg: '#fff' },
-  '.gitattributes':   { text: 'GIT',  bg: '#f54d27', fg: '#fff' },
-  '.env':             { text: 'ENV',  bg: '#3c873a', fg: '#fff' },
-  '.env.local':       { text: 'ENV',  bg: '#3c873a', fg: '#fff' },
-  '.env.example':     { text: 'ENV',  bg: '#3c873a', fg: '#fff' },
-  'makefile':         { text: 'MK',   bg: '#6d8086', fg: '#fff' },
-  'license':          { text: 'LIC',  bg: '#d29922', fg: '#fff' },
-  'license.md':       { text: 'LIC',  bg: '#d29922', fg: '#fff' },
-  'readme.md':        { text: 'MD',   bg: '#2ea043', fg: '#fff' },
-  'contributing.md':  { text: 'MD',   bg: '#2ea043', fg: '#fff' },
-  'changelog.md':     { text: 'MD',   bg: '#2ea043', fg: '#fff' },
-  'vite.config.ts':   { text: 'VITE', bg: '#646cff', fg: '#fff' },
-  'vite.config.js':   { text: 'VITE', bg: '#646cff', fg: '#fff' },
-  'next.config.js':   { text: 'NEXT', bg: '#000000', fg: '#fff' },
-  'next.config.ts':   { text: 'NEXT', bg: '#000000', fg: '#fff' },
-  'tailwind.config.js':{ text: 'TW', bg: '#38bdf8', fg: '#fff' },
-  'tailwind.config.ts':{ text: 'TW', bg: '#38bdf8', fg: '#fff' },
-  'webpack.config.js':{ text: 'WP',   bg: '#8dd6f9', fg: '#000' },
-  'jest.config.js':   { text: 'JEST', bg: '#99425b', fg: '#fff' },
-  'jest.config.ts':   { text: 'JEST', bg: '#99425b', fg: '#fff' },
-  'babel.config.js':  { text: 'BAB',  bg: '#f5da55', fg: '#000' },
-  '.babelrc':         { text: 'BAB',  bg: '#f5da55', fg: '#000' },
-  'cargo.toml':       { text: 'RS',   bg: '#dea584', fg: '#000' },
-  'go.mod':           { text: 'GO',   bg: '#00add8', fg: '#fff' },
-  'go.sum':           { text: 'GO',   bg: '#00add8', fg: '#fff' },
-  'requirements.txt': { text: 'PY',   bg: '#3572a5', fg: '#fff' },
-  'pyproject.toml':   { text: 'PY',   bg: '#3572a5', fg: '#fff' },
-  'gemfile':          { text: 'RB',   bg: '#701516', fg: '#fff' },
-  'pubspec.yaml':     { text: 'DAR',  bg: '#00b4ab', fg: '#fff' },
-  ext: {
-    'js':    { text: 'JS',   bg: '#f7df1e', fg: '#000' },
-    'mjs':   { text: 'JS',   bg: '#f7df1e', fg: '#000' },
-    'cjs':   { text: 'JS',   bg: '#f7df1e', fg: '#000' },
-    'jsx':   { text: 'JSX',  bg: '#61dafb', fg: '#000' },
-    'ts':    { text: 'TS',   bg: '#3178c6', fg: '#fff' },
-    'tsx':   { text: 'TSX',  bg: '#3178c6', fg: '#fff' },
-    'mts':   { text: 'TS',   bg: '#3178c6', fg: '#fff' },
-    'cts':   { text: 'TS',   bg: '#3178c6', fg: '#fff' },
-    'd.ts':  { text: 'DTS',  bg: '#3178c6', fg: '#fff' },
-    'html':  { text: 'HTML', bg: '#e34c26', fg: '#fff' },
-    'htm':   { text: 'HTML', bg: '#e34c26', fg: '#fff' },
-    'css':   { text: 'CSS',  bg: '#563d7c', fg: '#fff' },
-    'scss':  { text: 'SCSS', bg: '#c6538c', fg: '#fff' },
-    'sass':  { text: 'SASS', bg: '#c6538c', fg: '#fff' },
-    'less':  { text: 'LESS', bg: '#1d365d', fg: '#fff' },
-    'styl':  { text: 'STY',  bg: '#ff6347', fg: '#fff' },
-    'vue':   { text: 'VUE',  bg: '#41b883', fg: '#fff' },
-    'svelte':{ text: 'SV',   bg: '#ff3e00', fg: '#fff' },
-    'astro': { text: 'AST',  bg: '#ff5d01', fg: '#fff' },
-    'json':  { text: 'JSON', bg: '#292929', fg: '#f7df1e' },
-    'json5': { text: 'JSON', bg: '#292929', fg: '#f7df1e' },
-    'yaml':  { text: 'YAML', bg: '#cb171e', fg: '#fff' },
-    'yml':   { text: 'YAML', bg: '#cb171e', fg: '#fff' },
-    'toml':  { text: 'TOML', bg: '#9c4121', fg: '#fff' },
-    'xml':   { text: 'XML',  bg: '#0060ac', fg: '#fff' },
-    'csv':   { text: 'CSV',  bg: '#3c873a', fg: '#fff' },
-    'sql':   { text: 'SQL',  bg: '#e38c00', fg: '#fff' },
-    'md':    { text: 'MD',   bg: '#2ea043', fg: '#fff' },
-    'mdx':   { text: 'MDX',  bg: '#2ea043', fg: '#fff' },
-    'rst':   { text: 'RST',  bg: '#2ea043', fg: '#fff' },
-    'txt':   { text: 'TXT',  bg: '#6d8086', fg: '#fff' },
-    'pdf':   { text: 'PDF',  bg: '#da3633', fg: '#fff' },
-    'py':    { text: 'PY',   bg: '#3572a5', fg: '#fff' },
-    'pyw':   { text: 'PY',   bg: '#3572a5', fg: '#fff' },
-    'ipynb': { text: 'NB',   bg: '#f37626', fg: '#fff' },
-    'rs':    { text: 'RS',   bg: '#dea584', fg: '#000' },
-    'go':    { text: 'GO',   bg: '#00add8', fg: '#fff' },
-    'java':  { text: 'JV',   bg: '#b07219', fg: '#fff' },
-    'kt':    { text: 'KT',   bg: '#7f52ff', fg: '#fff' },
-    'kts':   { text: 'KT',   bg: '#7f52ff', fg: '#fff' },
-    'swift': { text: 'SW',   bg: '#f05138', fg: '#fff' },
-    'cs':    { text: 'C#',   bg: '#178600', fg: '#fff' },
-    'cpp':   { text: 'C++',  bg: '#f34b7d', fg: '#fff' },
-    'cc':    { text: 'C++',  bg: '#f34b7d', fg: '#fff' },
-    'cxx':   { text: 'C++',  bg: '#f34b7d', fg: '#fff' },
-    'c':     { text: 'C',    bg: '#555555', fg: '#fff' },
-    'h':     { text: 'H',    bg: '#555555', fg: '#fff' },
-    'hpp':   { text: 'H++',  bg: '#f34b7d', fg: '#fff' },
-    'rb':    { text: 'RB',   bg: '#701516', fg: '#fff' },
-    'php':   { text: 'PHP',  bg: '#4f5d95', fg: '#fff' },
-    'ex':    { text: 'EX',   bg: '#6e4a7e', fg: '#fff' },
-    'exs':   { text: 'EX',   bg: '#6e4a7e', fg: '#fff' },
-    'erl':   { text: 'ERL',  bg: '#b83998', fg: '#fff' },
-    'hs':    { text: 'HS',   bg: '#5e5086', fg: '#fff' },
-    'lua':   { text: 'LUA',  bg: '#000080', fg: '#fff' },
-    'r':     { text: 'R',    bg: '#198ce7', fg: '#fff' },
-    'scala': { text: 'SC',   bg: '#c22d40', fg: '#fff' },
-    'clj':   { text: 'CLJ',  bg: '#db5855', fg: '#fff' },
-    'dart':  { text: 'DAR',  bg: '#00b4ab', fg: '#fff' },
-    'nim':   { text: 'NIM',  bg: '#ffc200', fg: '#000' },
-    'zig':   { text: 'ZIG',  bg: '#f7a41d', fg: '#000' },
-    'v':     { text: 'V',    bg: '#5d87bf', fg: '#fff' },
-    'sh':    { text: 'SH',   bg: '#89e051', fg: '#000' },
-    'bash':  { text: 'SH',   bg: '#89e051', fg: '#000' },
-    'zsh':   { text: 'ZSH',  bg: '#89e051', fg: '#000' },
-    'fish':  { text: 'FSH',  bg: '#89e051', fg: '#000' },
-    'ps1':   { text: 'PS',   bg: '#012456', fg: '#fff' },
-    'bat':   { text: 'BAT',  bg: '#c1f12e', fg: '#000' },
-    'cmd':   { text: 'CMD',  bg: '#c1f12e', fg: '#000' },
-    'graphql':{ text: 'GQL', bg: '#e10098', fg: '#fff' },
-    'gql':   { text: 'GQL',  bg: '#e10098', fg: '#fff' },
-    'proto': { text: 'PB',   bg: '#3178c6', fg: '#fff' },
-    'tf':    { text: 'TF',   bg: '#7b42bc', fg: '#fff' },
-    'hcl':   { text: 'HCL',  bg: '#7b42bc', fg: '#fff' },
-    'nix':   { text: 'NIX',  bg: '#7e74b3', fg: '#fff' },
-    'lock':  { text: 'LCK',  bg: '#888888', fg: '#fff' },
-    'patch': { text: 'DIFF', bg: '#f0c27f', fg: '#000' },
-    'diff':  { text: 'DIFF', bg: '#f0c27f', fg: '#000' },
-    'log':   { text: 'LOG',  bg: '#888888', fg: '#fff' },
-    'wasm':  { text: 'WASM', bg: '#654ff0', fg: '#fff' },
-    'map':   { text: 'MAP',  bg: '#888888', fg: '#fff' },
-    'min.js':{ text: 'MIN',  bg: '#888888', fg: '#fff' },
-  }
-};
+const VSICONS_ATTR = 'data-vsicons-done';
 
-const FOLDER_ICON_MAP = {
-  'src':'#3178c6','source':'#3178c6','components':'#61dafb','component':'#61dafb',
-  'pages':'#7f52ff','views':'#7f52ff','app':'#e34c26','apps':'#e34c26',
-  'api':'#e38c00','apis':'#e38c00','lib':'#6d8086','libs':'#6d8086',
-  'utils':'#6d8086','util':'#6d8086','helpers':'#6d8086','helper':'#6d8086',
-  'hooks':'#61dafb','hook':'#61dafb','store':'#f7df1e','stores':'#f7df1e',
-  'context':'#f7df1e','contexts':'#f7df1e','types':'#3178c6','type':'#3178c6',
-  'interfaces':'#3178c6','models':'#3178c6','services':'#e38c00','service':'#e38c00',
-  'controllers':'#e38c00','controller':'#e38c00','routes':'#ff6347','route':'#ff6347',
-  'middleware':'#ff6347','middlewares':'#ff6347','config':'#6d8086','configs':'#6d8086',
-  'constants':'#d29922','constant':'#d29922','assets':'#f1e05a','asset':'#f1e05a',
-  'static':'#f1e05a','public':'#f1e05a','images':'#f1e05a','image':'#f1e05a',
-  'icons':'#f1e05a','icon':'#f1e05a','fonts':'#f1e05a','font':'#f1e05a',
-  'styles':'#c6538c','style':'#c6538c','css':'#563d7c','scss':'#c6538c',
-  'tests':'#2ea043','test':'#2ea043','__tests__':'#2ea043','spec':'#2ea043',
-  'e2e':'#2ea043','integration':'#2ea043','docs':'#607d8b','doc':'#607d8b',
-  'documentation':'#607d8b','examples':'#607d8b','scripts':'#89e051','script':'#89e051',
-  'bin':'#89e051','tools':'#89e051','build':'#d29922','dist':'#d29922',
-  'out':'#d29922','output':'#d29922','node_modules':'#da3633','vendor':'#da3633',
-  'packages':'#2f81f7','pkg':'#2f81f7','internal':'#2f81f7','cmd':'#2f81f7',
-  'migrations':'#9c4121','migration':'#9c4121','database':'#9c4121','db':'#9c4121',
-  'schemas':'#9c4121','schema':'#9c4121','.github':'#24292f','.vscode':'#007acc',
-  '.git':'#f54d27','infrastructure':'#7b42bc','terraform':'#7b42bc','k8s':'#326ce5',
-  'kubernetes':'#326ce5','docker':'#0db7ed',
-};
+function getVSCodeIconUrl(name, isFolder) {
+  const lower = name.toLowerCase();
 
-function buildFileIconDataUri(filename) {
-  const lower = filename.toLowerCase();
-  if (FILE_ICON_MAP[lower]) {
-    return makeIconSvgUri(FILE_ICON_MAP[lower]);
+  if (isFolder) {
+    const folderMap = {
+      'src': 'folder_type_src.svg',
+      'source': 'folder_type_src.svg',
+      'components': 'folder_type_component.svg',
+      'component': 'folder_type_component.svg',
+      'api': 'folder_type_api.svg',
+      'apis': 'folder_type_api.svg',
+      'lib': 'folder_type_library.svg',
+      'libs': 'folder_type_library.svg',
+      'library': 'folder_type_library.svg',
+      'utils': 'folder_type_helper.svg',
+      'util': 'folder_type_helper.svg',
+      'helpers': 'folder_type_helper.svg',
+      'helper': 'folder_type_helper.svg',
+      'hooks': 'folder_type_hook.svg',
+      'hook': 'folder_type_hook.svg',
+      'styles': 'folder_type_style.svg',
+      'style': 'folder_type_style.svg',
+      'css': 'folder_type_style.svg',
+      'scss': 'folder_type_style.svg',
+      'tests': 'folder_type_test.svg',
+      'test': 'folder_type_test.svg',
+      '__tests__': 'folder_type_test.svg',
+      'spec': 'folder_type_test.svg',
+      'e2e': 'folder_type_e2e.svg',
+      'mocks': 'folder_type_mock.svg',
+      '__mocks__': 'folder_type_mock.svg',
+      'docs': 'folder_type_docs.svg',
+      'doc': 'folder_type_docs.svg',
+      'documentation': 'folder_type_docs.svg',
+      'scripts': 'folder_type_script.svg',
+      'script': 'folder_type_script.svg',
+      'assets': 'folder_type_asset.svg',
+      'asset': 'folder_type_asset.svg',
+      'images': 'folder_type_images.svg',
+      'image': 'folder_type_images.svg',
+      'img': 'folder_type_images.svg',
+      'icons': 'folder_type_images.svg',
+      'fonts': 'folder_type_fonts.svg',
+      'font': 'folder_type_fonts.svg',
+      'public': 'folder_type_public.svg',
+      'static': 'folder_type_public.svg',
+      'dist': 'folder_type_dist.svg',
+      'out': 'folder_type_dist.svg',
+      'output': 'folder_type_dist.svg',
+      'node_modules': 'folder_type_node.svg',
+      'config': 'folder_type_config.svg',
+      'configs': 'folder_type_config.svg',
+      '.github': 'folder_type_github.svg',
+      '.vscode': 'folder_type_vscode.svg',
+      '.git': 'folder_type_git.svg',
+      'docker': 'folder_type_docker.svg',
+      'kubernetes': 'folder_type_kubernetes.svg',
+      'k8s': 'folder_type_kubernetes.svg',
+      'models': 'folder_type_model.svg',
+      'model': 'folder_type_model.svg',
+      'controllers': 'folder_type_controller.svg',
+      'controller': 'folder_type_controller.svg',
+      'services': 'folder_type_services.svg',
+      'service': 'folder_type_services.svg',
+      'types': 'folder_type_typescript.svg',
+      'interfaces': 'folder_type_typings.svg',
+      'typings': 'folder_type_typings.svg',
+      'routes': 'folder_type_route.svg',
+      'route': 'folder_type_route.svg',
+      'middleware': 'folder_type_middleware.svg',
+      'middlewares': 'folder_type_middleware.svg',
+      'server': 'folder_type_server.svg',
+      'client': 'folder_type_client.svg',
+      'packages': 'folder_type_package.svg',
+      'modules': 'folder_type_module.svg',
+      'tools': 'folder_type_tools.svg',
+      'themes': 'folder_type_theme.svg',
+      'theme': 'folder_type_theme.svg',
+      'redux': 'folder_type_redux.svg',
+      'locales': 'folder_type_locale.svg',
+      'locale': 'folder_type_locale.svg',
+      'i18n': 'folder_type_locale.svg',
+      'views': 'folder_type_view.svg',
+      'view': 'folder_type_view.svg',
+      'logs': 'folder_type_log.svg',
+      'log': 'folder_type_log.svg',
+      'tmp': 'folder_type_temp.svg',
+      'temp': 'folder_type_temp.svg',
+      'database': 'folder_type_db.svg',
+      'db': 'folder_type_db.svg',
+      'migrations': 'folder_type_db.svg',
+      'migration': 'folder_type_db.svg',
+    };
+    const icon = folderMap[lower];
+    if (icon) return chrome.runtime.getURL('icons/file-icons/' + icon);
+    return chrome.runtime.getURL('icons/file-icons/default_folder.svg');
   }
-  const doubleExtMatch = lower.match(/\.(test|spec)\.[jt]sx?$/) ||
-                         lower.match(/\.d\.ts$/) ||
-                         lower.match(/\.min\.js$/);
-  if (doubleExtMatch) {
-    if (lower.endsWith('.d.ts')) return makeIconSvgUri(FILE_ICON_MAP.ext['d.ts']);
-    if (lower.endsWith('.min.js')) return makeIconSvgUri(FILE_ICON_MAP.ext['min.js']);
-    if (lower.match(/\.(test|spec)\.[jt]sx?$/)) {
-      return makeIconSvgUri({ text: 'TEST', bg: '#2ea043', fg: '#fff' });
-    }
+
+  // Special full filenames first
+  const fullNameMap = {
+    'package.json': 'file_type_npm.svg',
+    'package-lock.json': 'file_type_npm.svg',
+    'yarn.lock': 'file_type_yarn.svg',
+    'pnpm-lock.yaml': 'file_type_pnpm.svg',
+    'bun.lockb': 'file_type_bun.svg',
+    'tsconfig.json': 'file_type_tsconfig.svg',
+    'jsconfig.json': 'file_type_jsconfig.svg',
+    '.eslintrc': 'file_type_eslint.svg',
+    '.eslintrc.js': 'file_type_eslint.svg',
+    '.eslintrc.cjs': 'file_type_eslint.svg',
+    '.eslintrc.json': 'file_type_eslint.svg',
+    '.eslintrc.yaml': 'file_type_eslint.svg',
+    '.eslintrc.yml': 'file_type_eslint.svg',
+    'eslint.config.js': 'file_type_eslint.svg',
+    'eslint.config.ts': 'file_type_eslint.svg',
+    '.prettierrc': 'file_type_prettier.svg',
+    '.prettierrc.js': 'file_type_prettier.svg',
+    '.prettierrc.json': 'file_type_prettier.svg',
+    '.prettierrc.yaml': 'file_type_prettier.svg',
+    '.prettierrc.yml': 'file_type_prettier.svg',
+    'prettier.config.js': 'file_type_prettier.svg',
+    'prettier.config.ts': 'file_type_prettier.svg',
+    'dockerfile': 'file_type_docker.svg',
+    'docker-compose.yml': 'file_type_docker.svg',
+    'docker-compose.yaml': 'file_type_docker.svg',
+    '.dockerignore': 'file_type_docker.svg',
+    '.gitignore': 'file_type_git.svg',
+    '.gitattributes': 'file_type_git.svg',
+    '.gitmodules': 'file_type_git.svg',
+    '.env': 'file_type_dotenv.svg',
+    '.env.local': 'file_type_dotenv.svg',
+    '.env.example': 'file_type_dotenv.svg',
+    '.env.development': 'file_type_dotenv.svg',
+    '.env.production': 'file_type_dotenv.svg',
+    '.env.test': 'file_type_dotenv.svg',
+    'makefile': 'file_type_text.svg',
+    'cmakelists.txt': 'file_type_cmake.svg',
+    'readme.md': 'file_type_markdown.svg',
+    'readme': 'file_type_markdown.svg',
+    'license': 'file_type_license.svg',
+    'license.md': 'file_type_license.svg',
+    'license.txt': 'file_type_license.svg',
+    'vite.config.js': 'file_type_vite.svg',
+    'vite.config.ts': 'file_type_vite.svg',
+    'vite.config.mts': 'file_type_vite.svg',
+    'next.config.js': 'file_type_next.svg',
+    'next.config.ts': 'file_type_next.svg',
+    'next.config.mjs': 'file_type_next.svg',
+    'nuxt.config.js': 'file_type_nuxt.svg',
+    'nuxt.config.ts': 'file_type_nuxt.svg',
+    'tailwind.config.js': 'file_type_tailwind.svg',
+    'tailwind.config.ts': 'file_type_tailwind.svg',
+    'tailwind.config.cjs': 'file_type_tailwind.svg',
+    'webpack.config.js': 'file_type_webpack.svg',
+    'webpack.config.ts': 'file_type_webpack.svg',
+    'jest.config.js': 'file_type_jest.svg',
+    'jest.config.ts': 'file_type_jest.svg',
+    'jest.config.cjs': 'file_type_jest.svg',
+    'vitest.config.js': 'file_type_vitest.svg',
+    'vitest.config.ts': 'file_type_vitest.svg',
+    'babel.config.js': 'file_type_babel.svg',
+    'babel.config.json': 'file_type_babel.svg',
+    '.babelrc': 'file_type_babel.svg',
+    '.babelrc.js': 'file_type_babel.svg',
+    'cargo.toml': 'file_type_cargo.svg',
+    'cargo.lock': 'file_type_cargo.svg',
+    'go.mod': 'file_type_go.svg',
+    'go.sum': 'file_type_go.svg',
+    'requirements.txt': 'file_type_python.svg',
+    'pyproject.toml': 'file_type_python.svg',
+    'setup.py': 'file_type_python.svg',
+    'pipfile': 'file_type_python.svg',
+    'gemfile': 'file_type_ruby.svg',
+    'gemfile.lock': 'file_type_ruby.svg',
+    'rakefile': 'file_type_ruby.svg',
+    'pubspec.yaml': 'file_type_dartlang.svg',
+    'pubspec.lock': 'file_type_dartlang.svg',
+    'mix.exs': 'file_type_elixir.svg',
+    'mix.lock': 'file_type_elixir.svg',
+    '.travis.yml': 'file_type_travis.svg',
+    '.travis.yaml': 'file_type_travis.svg',
+    'vercel.json': 'file_type_vercel.svg',
+    'netlify.toml': 'file_type_netlify.svg',
+    'firebase.json': 'file_type_firebase.svg',
+    '.firebaserc': 'file_type_firebase.svg',
+    'angular.json': 'file_type_angular.svg',
+    'angular-cli.json': 'file_type_angular.svg',
+    'svelte.config.js': 'file_type_svelte.svg',
+    'svelte.config.ts': 'file_type_svelte.svg',
+    'astro.config.js': 'file_type_astro.svg',
+    'astro.config.ts': 'file_type_astro.svg',
+    'astro.config.mjs': 'file_type_astro.svg',
+    'prisma': 'file_type_prisma.svg',
+    '.nvmrc': 'file_type_node.svg',
+    '.node-version': 'file_type_node.svg',
+    'renovate.json': 'file_type_renovate.svg',
+    'renovate.json5': 'file_type_renovate.svg',
+    '.editorconfig': 'file_type_editorconfig.svg',
+  };
+
+  if (fullNameMap[lower]) {
+    return chrome.runtime.getURL('icons/file-icons/' + fullNameMap[lower]);
   }
+
+  // Extension mapping
   const ext = lower.includes('.') ? lower.slice(lower.lastIndexOf('.') + 1) : '';
-  if (ext && FILE_ICON_MAP.ext[ext]) {
-    return makeIconSvgUri(FILE_ICON_MAP.ext[ext]);
+  const extMap = {
+    'js': 'file_type_js.svg',
+    'mjs': 'file_type_js.svg',
+    'cjs': 'file_type_js.svg',
+    'jsx': 'file_type_reactjs.svg',
+    'ts': 'file_type_typescript.svg',
+    'mts': 'file_type_typescript.svg',
+    'cts': 'file_type_typescript.svg',
+    'tsx': 'file_type_reactts.svg',
+    'py': 'file_type_python.svg',
+    'pyw': 'file_type_python.svg',
+    'pyi': 'file_type_python.svg',
+    'ipynb': 'file_type_jupyter.svg',
+    'rs': 'file_type_rust.svg',
+    'go': 'file_type_go.svg',
+    'java': 'file_type_java.svg',
+    'class': 'file_type_java.svg',
+    'jar': 'file_type_java.svg',
+    'kt': 'file_type_kotlin.svg',
+    'kts': 'file_type_kotlin.svg',
+    'swift': 'file_type_swift.svg',
+    'cs': 'file_type_csharp.svg',
+    'cpp': 'file_type_cpp.svg',
+    'cc': 'file_type_cpp.svg',
+    'cxx': 'file_type_cpp.svg',
+    'c': 'file_type_c.svg',
+    'h': 'file_type_c.svg',
+    'hpp': 'file_type_cpp.svg',
+    'rb': 'file_type_ruby.svg',
+    'php': 'file_type_php.svg',
+    'html': 'file_type_html.svg',
+    'htm': 'file_type_html.svg',
+    'css': 'file_type_css.svg',
+    'scss': 'file_type_scss.svg',
+    'sass': 'file_type_sass.svg',
+    'less': 'file_type_less.svg',
+    'styl': 'file_type_stylus.svg',
+    'vue': 'file_type_vue.svg',
+    'svelte': 'file_type_svelte.svg',
+    'astro': 'file_type_astro.svg',
+    'json': 'file_type_json.svg',
+    'json5': 'file_type_json.svg',
+    'jsonc': 'file_type_json.svg',
+    'yaml': 'file_type_yaml.svg',
+    'yml': 'file_type_yaml.svg',
+    'toml': 'file_type_toml.svg',
+    'xml': 'file_type_xml.svg',
+    'md': 'file_type_markdown.svg',
+    'mdx': 'file_type_mdx.svg',
+    'rst': 'file_type_markdown.svg',
+    'txt': 'file_type_text.svg',
+    'sql': 'file_type_sql.svg',
+    'graphql': 'file_type_graphql.svg',
+    'gql': 'file_type_graphql.svg',
+    'sh': 'file_type_shell.svg',
+    'bash': 'file_type_shell.svg',
+    'zsh': 'file_type_shell.svg',
+    'fish': 'file_type_shell.svg',
+    'ps1': 'file_type_powershell.svg',
+    'psm1': 'file_type_powershell.svg',
+    'bat': 'file_type_bat.svg',
+    'cmd': 'file_type_bat.svg',
+    'lua': 'file_type_lua.svg',
+    'r': 'file_type_r.svg',
+    'scala': 'file_type_scala.svg',
+    'ex': 'file_type_elixir.svg',
+    'exs': 'file_type_elixir.svg',
+    'erl': 'file_type_erlang.svg',
+    'hs': 'file_type_haskell.svg',
+    'dart': 'file_type_dartlang.svg',
+    'nim': 'file_type_nim.svg',
+    'zig': 'file_type_zig.svg',
+    'jl': 'file_type_julia.svg',
+    'tf': 'file_type_terraform.svg',
+    'proto': 'file_type_protobuf.svg',
+    'wasm': 'file_type_wasm.svg',
+    'pdf': 'file_type_pdf.svg',
+    'png': 'file_type_image.svg',
+    'jpg': 'file_type_image.svg',
+    'jpeg': 'file_type_image.svg',
+    'gif': 'file_type_image.svg',
+    'svg': 'file_type_svg.svg',
+    'ico': 'file_type_image.svg',
+    'webp': 'file_type_image.svg',
+    'mp4': 'file_type_video.svg',
+    'mov': 'file_type_video.svg',
+    'mp3': 'file_type_audio.svg',
+    'wav': 'file_type_audio.svg',
+    'zip': 'file_type_zip.svg',
+    'tar': 'file_type_zip.svg',
+    'gz': 'file_type_zip.svg',
+    'rar': 'file_type_zip.svg',
+    'patch': 'file_type_patch.svg',
+    'diff': 'file_type_patch.svg',
+    'log': 'file_type_log.svg',
+    'env': 'file_type_dotenv.svg',
+    'pem': 'file_type_cert.svg',
+    'crt': 'file_type_cert.svg',
+    'key': 'file_type_key.svg',
+  };
+
+  if (ext && extMap[ext]) {
+    return chrome.runtime.getURL('icons/file-icons/' + extMap[ext]);
   }
-  return null;
+
+  return chrome.runtime.getURL('icons/file-icons/default_file.svg');
 }
 
-function buildFolderIconDataUri(folderName) {
-  const color = FOLDER_ICON_MAP[folderName.toLowerCase()];
-  if (!color) return null;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25v-8.5A1.75 1.75 0 0014.25 3H7.5L6.75 1.5A.75.75 0 006 1H1.75z" fill="${color}"/><path d="M0 5.75C0 4.784.784 4 1.75 4h12.5c.966 0 1.75.784 1.75 1.75v7.5A1.75 1.75 0 0114.25 15H1.75A1.75 1.75 0 010 13.25V5.75z" fill="${color}" opacity="0.75"/></svg>`;
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-}
+async function injectVSCodeFileIcons(owner, repo) {
+  const isTreeLike = /\/[^/]+\/[^/]+(\/tree\/|\/?)$/.test(location.pathname)
+    && !/\/blob\//.test(location.pathname);
+  if (!isTreeLike) return;
 
-function makeIconSvgUri({ text, bg, fg }) {
-  const fontSize = text.length <= 2 ? 7 : text.length === 3 ? 6 : 5;
-  const safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><rect width="16" height="16" rx="3" fill="${bg}"/><text x="8" y="8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="${fontSize}" font-weight="800" fill="${fg}" text-anchor="middle" dominant-baseline="middle">${safe}</text></svg>`;
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-}
+  const tree = document.querySelector(
+    'table[aria-labelledby="folders-and-files"], [role="grid"]'
+  );
+  if (!tree || tree.hasAttribute(VSICONS_ATTR)) return;
+  tree.setAttribute(VSICONS_ATTR, 'true');
 
-async function injectVSCodeFileIcons(_owner, _repo) {
-  const treeContainer = document.querySelector('table[aria-labelledby="folders-and-files"], [role="grid"]');
-  if (!treeContainer || treeContainer.hasAttribute('data-vsicons-done')) return;
-  treeContainer.setAttribute('data-vsicons-done', 'true');
+  console.log('[GH Health] Found tree:', tree.tagName, tree.className);
 
-  const rows = treeContainer.querySelectorAll('tr, [role="row"]');
-  rows.forEach((row) => {
-    if (row.hasAttribute('data-vsicon-replaced')) return;
-    const iconSvg = row.querySelector('svg.octicon-file, svg.octicon-file-code, svg[aria-label="File"], svg.octicon-file-directory-fill, svg[aria-label="Directory"]');
-    const link = row.querySelector('a[href*="/blob/"], a[href*="/tree/"]');
-    if (!iconSvg || !link) return;
+  const rows = Array.from(
+    tree.querySelectorAll('tr, div[role="row"], [class*="TreeRow"], [class*="row"]')
+  ).filter(row => !row.querySelector('th') && !row.getAttribute('role')?.includes('columnheader'));
 
+  console.log('[GH Health] Found rows:', rows.length);
+
+  rows.forEach(function (row) {
+    if (row.hasAttribute('data-vsicon-row')) return;
+
+    // Log the first row to understand structure
+    if (!tree.hasAttribute('data-debug-logged')) {
+      tree.setAttribute('data-debug-logged', 'true');
+      console.log('[GH Health] First row HTML:', row.outerHTML.slice(0, 500));
+    }
+
+    const fileLink = row.querySelector('a[href*="/' + owner + '/' + repo + '/blob/"]');
+    const folderLink = row.querySelector('a[href*="/' + owner + '/' + repo + '/tree/"]');
+    const existingIcon =
+      row.querySelector('svg.octicon-file-directory-fill') ||
+      row.querySelector('svg.octicon-file-directory') ||
+      row.querySelector('svg.octicon-file') ||
+      row.querySelector('svg[class*="octicon"]') ||
+      row.querySelector('svg[aria-hidden="true"]') ||
+      row.querySelector('img[data-vsicon]');
+
+    if (!existingIcon) return;
+    if (!fileLink && !folderLink) return;
+
+    const link = fileLink || folderLink;
+    const isFolder = Boolean(folderLink);
     const href = link.getAttribute('href') || '';
-    const name = decodeURIComponent(href.split('/').pop() || link.textContent.trim());
-    const isFolder = href.includes('/tree/');
+    const hrefClean = href.split('?')[0].replace(/\/$/, '');
+    const name = decodeURIComponent(hrefClean.split('/').pop() || '').trim();
+    if (!name) return;
 
-    const dataUri = isFolder ? buildFolderIconDataUri(name) : buildFileIconDataUri(name);
-    if (!dataUri) return;
+    const iconUrl = getVSCodeIconUrl(name, isFolder);
 
     const img = document.createElement('img');
-    img.src = dataUri;
+    img.src = iconUrl;
     img.width = 16;
     img.height = 16;
     img.alt = '';
-    img.style.cssText = 'vertical-align:middle;flex-shrink:0;';
-    iconSvg.replaceWith(img);
-    row.setAttribute('data-vsicon-replaced', 'true');
+    img.setAttribute('data-vsicon', 'true');
+    img.style.cssText = 'display:inline-block;vertical-align:middle;flex-shrink:0;margin-right:4px;';
+
+    img.onerror = function () {
+      img.src = chrome.runtime.getURL(
+        isFolder ? 'icons/file-icons/default_folder.svg' : 'icons/file-icons/default_file.svg'
+      );
+      img.onerror = null;
+    };
+
+    existingIcon.replaceWith(img);
+    row.setAttribute('data-vsicon-row', 'true');
   });
 }
 
-// ── FEATURE 2: Open in Web IDE Button ──
+// â”€â”€ FEATURE 2: Open in Web IDE Button â”€â”€
 
 async function injectOpenInWebIDE(owner, repo) {
   if (document.body.hasAttribute('data-webide-done')) return;
@@ -2314,7 +2481,7 @@ async function injectOpenInWebIDE(owner, repo) {
   parent.insertBefore(wrap, codeBtn.closest('div, details') || codeBtn);
 }
 
-// ── FEATURE 3: Lines of Code in Sidebar ──
+// â”€â”€ FEATURE 3: Lines of Code in Sidebar â”€â”€
 
 async function injectLOCInSidebar(owner, repo) {
   if (!/^\/[^/]+\/[^/]+\/?$/.test(location.pathname)) return;
@@ -2346,7 +2513,7 @@ async function injectLOCInSidebar(owner, repo) {
   }
 }
 
-// ── FEATURE 4: Absolute Dates ──
+// â”€â”€ FEATURE 4: Absolute Dates â”€â”€
 
 let absDateObserver = null;
 
@@ -2436,7 +2603,7 @@ async function injectAbsoluteDates() {
   }
 }
 
-// ── FEATURE 5: Health Score Sidebar Panel ──
+// â”€â”€ FEATURE 5: Health Score Sidebar Panel â”€â”€
 
 async function injectHealthSidebarPanel(owner, repo) {
   if (!/^\/[^/]+\/[^/]+\/?$/.test(location.pathname)) return;
@@ -2490,15 +2657,15 @@ async function injectHealthSidebarPanel(owner, repo) {
       hsbBar('Popularity', data.popularityScore, 3, '#d29922') +
     '</div>' +
     '<div class="gh-health-sidebar-metrics">' +
-      metricRow('⚡ Velocity', data.velocityLabel || 'unknown') +
-      metricRow('👥 Bus Factor', data.busFactor || 'healthy') +
-      metricRow('⚖️ License', licenseDisplay) +
-      metricRow('🏷️ Release', releaseDisplay) +
-      (data.deps ? metricRow('📦 Deps', data.deps.riskLabel || 'unknown') : '') +
+      metricRow('âš¡ Velocity', data.velocityLabel || 'unknown') +
+      metricRow('ðŸ‘¥ Bus Factor', data.busFactor || 'healthy') +
+      metricRow('âš–ï¸ License', licenseDisplay) +
+      metricRow('ðŸ·ï¸ Release', releaseDisplay) +
+      (data.deps ? metricRow('ðŸ“¦ Deps', data.deps.riskLabel || 'unknown') : '') +
     '</div>' +
     '<div class="gh-health-sidebar-footer">' +
       'Last checked ' + timeAgoShort(data.scannedAt) +
-      '<button class="gh-health-sidebar-refresh" type="button">↻</button>' +
+      '<button class="gh-health-sidebar-refresh" type="button">â†»</button>' +
     '</div>';
 
   panel.querySelector('.gh-health-sidebar-refresh').addEventListener('click', async () => {
@@ -2519,14 +2686,13 @@ async function injectHealthSidebarPanel(owner, repo) {
 function cleanupAllBadges() {
   document.querySelectorAll('.gh-health-badge').forEach((badge) => badge.remove());
   document.querySelectorAll('.eg-download, .eg-repo-size, .js-file-clipboard, .js-file-download, .js-enhanced-github-copy-btn, .gh-md-print-btn, .gh-readme-toc, .gh-pr-complexity, .gh-todo-summary, .gh-insights-panel, .gh-issues-summary, .gh-quick-clone-wrap, .gh-star-history, .gh-commit-quality-summary, .gh-webide-wrap, .gh-loc-stat-row, .gh-health-sidebar-panel').forEach((node) => node.remove());
-  document.querySelectorAll('[data-health-done], [data-toc-done], [data-pr-complexity-done], [data-todo-done], [data-insights-done], [data-issues-age-done], [data-icons-done], [data-clone-done], [data-star-history-done], [data-commit-quality-done], [data-bookmark-done], [data-md-print-done], [data-readme-print-done], [data-vsicons-done], [data-vsicon-replaced], [data-webide-done], [data-loc-sidebar-done], [data-abs-dates-done], [data-health-panel-done]').forEach((element) => {
+  document.querySelectorAll('[data-health-done], [data-toc-done], [data-pr-complexity-done], [data-todo-done], [data-insights-done], [data-issues-age-done], [data-clone-done], [data-star-history-done], [data-commit-quality-done], [data-bookmark-done], [data-md-print-done], [data-readme-print-done], [data-vsicons-done], [data-vsicon-row], [data-vsicon], [data-webide-done], [data-loc-sidebar-done], [data-abs-dates-done], [data-health-panel-done]').forEach((element) => {
     element.removeAttribute('data-health-done');
     element.removeAttribute('data-toc-done');
     element.removeAttribute('data-pr-complexity-done');
     element.removeAttribute('data-todo-done');
     element.removeAttribute('data-insights-done');
     element.removeAttribute('data-issues-age-done');
-    element.removeAttribute('data-icons-done');
     element.removeAttribute('data-clone-done');
     element.removeAttribute('data-star-history-done');
     element.removeAttribute('data-commit-quality-done');
@@ -2534,7 +2700,8 @@ function cleanupAllBadges() {
     element.removeAttribute('data-md-print-done');
     element.removeAttribute('data-readme-print-done');
     element.removeAttribute('data-vsicons-done');
-    element.removeAttribute('data-vsicon-replaced');
+    element.removeAttribute('data-vsicon-row');
+    element.removeAttribute('data-vsicon');
     element.removeAttribute('data-webide-done');
     element.removeAttribute('data-loc-sidebar-done');
     element.removeAttribute('data-abs-dates-done');
