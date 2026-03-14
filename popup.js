@@ -17,9 +17,7 @@ function bindActions() {
   });
 
   const toggleIds = [
-    'toggle-search', 'toggle-trending', 'toggle-deps', 'toggle-bus-factor', 'toggle-license-risk',
-    'toggle-readme-toc', 'toggle-pr-complexity', 'toggle-todo', 'toggle-insights',
-    'toggle-issue-age', 'toggle-file-icons', 'toggle-quick-clone', 'toggle-star-history', 'toggle-commit-quality',
+    'toggle-bus-factor', 'toggle-license-risk',
     'toggle-file-enhancements', 'toggle-md-printer',
     'toggle-vsicons', 'toggle-webide', 'toggle-loc-sidebar', 'toggle-abs-dates', 'toggle-health-sidebar'
   ];
@@ -59,20 +57,10 @@ async function loadSettings() {
   const response = await sendMessage({ type: 'GET_SETTINGS' }).catch(() => ({ settings: {} }));
   const data = response.settings || {};
 
-  setCheckbox('toggle-search', data.showOnSearch !== false);
-  setCheckbox('toggle-trending', data.showOnTrending !== false);
-  setCheckbox('toggle-deps', data.showDeps !== false);
   setCheckbox('toggle-bus-factor', data.showBusFactor !== false);
   setCheckbox('toggle-license-risk', data.showLicenseRisk !== false);
   setCheckbox('toggle-readme-toc', data.showReadmeToc !== false);
-  setCheckbox('toggle-pr-complexity', data.showPrComplexity !== false);
   setCheckbox('toggle-todo', data.showTodoHighlights !== false);
-  setCheckbox('toggle-insights', data.showContributionInsights !== false);
-  setCheckbox('toggle-issue-age', data.showIssueAge !== false);
-  setCheckbox('toggle-file-icons', data.showFileTypeIcons !== false);
-  setCheckbox('toggle-quick-clone', data.showQuickClone !== false);
-  setCheckbox('toggle-star-history', data.showStarHistory !== false);
-  setCheckbox('toggle-commit-quality', data.showCommitQuality !== false);
   setCheckbox('toggle-file-enhancements', data.showFileEnhancements !== false);
   setCheckbox('toggle-md-printer', data.showMarkdownPrinter !== false);
   setCheckbox('toggle-vsicons', data.showVSIcons !== false);
@@ -96,20 +84,8 @@ async function saveSettings() {
   await sendMessage({
     type: 'SET_SETTINGS',
     payload: {
-      showOnSearch: isChecked('toggle-search'),
-      showOnTrending: isChecked('toggle-trending'),
-      showDeps: isChecked('toggle-deps'),
       showBusFactor: isChecked('toggle-bus-factor'),
       showLicenseRisk: isChecked('toggle-license-risk'),
-      showReadmeToc: isChecked('toggle-readme-toc'),
-      showPrComplexity: isChecked('toggle-pr-complexity'),
-      showTodoHighlights: isChecked('toggle-todo'),
-      showContributionInsights: isChecked('toggle-insights'),
-      showIssueAge: isChecked('toggle-issue-age'),
-      showFileTypeIcons: isChecked('toggle-file-icons'),
-      showQuickClone: isChecked('toggle-quick-clone'),
-      showStarHistory: isChecked('toggle-star-history'),
-      showCommitQuality: isChecked('toggle-commit-quality'),
       showFileEnhancements: isChecked('toggle-file-enhancements'),
       showMarkdownPrinter: isChecked('toggle-md-printer'),
       showVSIcons: isChecked('toggle-vsicons'),
