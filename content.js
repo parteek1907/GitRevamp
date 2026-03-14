@@ -651,13 +651,10 @@ const enhancedGithubHandlersUtil = {
       }
 
       const allRows = document.querySelectorAll('table > tbody > tr.react-directory-row, table > tbody > tr[class*="DirectoryContent"]');
-      // Filter out the "Latest commit" header row — it has a td with colspan or contains LatestCommit
+      // Filter out the "Latest commit" header row — it has a td with colspan
       const containerItems = Array.from(allRows).filter(function(row) {
         const firstTd = row.querySelector('td');
-        if (firstTd && firstTd.hasAttribute('colspan')) return false;
-        // Also skip rows that don't have file/folder links
-        if (!row.querySelector('a[href*="/blob/"], a[href*="/tree/"]')) return false;
-        return true;
+        return !(firstTd && firstTd.hasAttribute('colspan'));
       });
       const firstCell = document.querySelectorAll('tbody tr > td:nth-child(1)')[0];
 
