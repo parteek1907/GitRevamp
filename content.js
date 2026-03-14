@@ -49,6 +49,10 @@ let lastTrackedRepo = '';
 let enhancedGithubClickBound = false;
 let enhancedGithubLastUrl = '';
 
+if (typeof initSidebar === 'function') {
+  initSidebar();
+}
+
 bootstrap().catch((error) => {
   if (!isExpectedRuntimeError(error)) {
     console.error('[GH Health]', error.message);
@@ -69,6 +73,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     });
   }
 
+  if (message.type === 'SIDEBAR_REFRESH') {
+    if (typeof refreshSidebarData === 'function') refreshSidebarData();
+  }
+
   return false;
 });
 
@@ -82,6 +90,7 @@ async function bootstrap() {
       settings = Object.assign({}, settings, settingsResponse.settings);
     }
     badgesHidden = hiddenState;
+    window.__ghhSettings = settings;
   } catch (_error) {
     // use defaults
   }
@@ -152,9 +161,10 @@ function scanPage() {
     if (settings.showLOCSidebar) {
       injectLOCInSidebar(owner, repo).catch(() => {});
     }
-    if (settings.showHealthSidebar) {
-      injectHealthSidebarPanel(owner, repo).catch(() => {});
-    }
+    // Health sidebar panel now handled by sidebar.js
+    // if (settings.showHealthSidebar) {
+    //   injectHealthSidebarPanel(owner, repo).catch(() => {});
+    // }
   }
 
   if (settings.showAbsoluteDates) {
@@ -3158,7 +3168,7 @@ async function injectHealthSidebarPanel(owner, repo) {
 
 function cleanupAllBadges() {
   document.querySelectorAll('.gh-health-badge').forEach((badge) => badge.remove());
-  document.querySelectorAll('.eg-download, .eg-repo-size, .js-file-clipboard, .js-file-download, .js-enhanced-github-copy-btn, .gh-md-print-btn, .gh-readme-toc, .gh-pr-complexity, .gh-todo-summary, .gh-insights-panel, .gh-issues-summary, .gh-quick-clone-wrap, .gh-star-history, .gh-commit-quality-summary, .gh-webide-wrap, .gh-loc-stat-row, .gh-health-sidebar-panel, .gh-abs-date-span').forEach((node) => node.remove());
+  document.querySelectorAll('.eg-download, .eg-repo-size, .js-file-clipboard, .js-file-download, .js-enhanced-github-copy-btn, .gh-md-print-btn, .gh-readme-toc, .gh-pr-complexity, .gh-todo-summary, .gh-insights-panel, .gh-issues-summary, .gh-quick-clone-wrap, .gh-star-history, .gh-commit-quality-summary, .gh-webide-wrap, .gh-loc-stat-row, .gh-loc-modal-backdrop, .gh-health-sidebar-panel, .gh-abs-date-span').forEach((node) => node.remove());
   document.querySelectorAll('[data-health-done], [data-toc-done], [data-pr-complexity-done], [data-todo-done], [data-insights-done], [data-issues-age-done], [data-clone-done], [data-star-history-done], [data-commit-quality-done], [data-bookmark-done], [data-md-print-done], [data-readme-print-done], [data-vsicons-done], [data-vsicon-row], [data-vsicon], [data-webide-done], [data-loc-sidebar-done], [data-health-panel-done], [data-abs-converted], [data-abs-hidden]').forEach((element) => {
     element.removeAttribute('data-health-done');
     element.removeAttribute('data-toc-done');
@@ -3181,4 +3191,8 @@ function cleanupAllBadges() {
     element.removeAttribute('data-abs-converted');
     element.removeAttribute('data-abs-hidden');
   });
+
+  if (typeof refreshSidebarData === 'function') {
+    refreshSidebarData();
+  }
 }
