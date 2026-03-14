@@ -943,7 +943,7 @@ local-time[data-abs-hidden] {
   -webkit-backdrop-filter: blur(var(--ghh-sidebar-blur));
   border-right: 1px solid var(--ghh-sidebar-border);
   box-shadow: var(--ghh-sidebar-shadow);
-  overflow: hidden;
+  overflow: visible;
 }
 
 
@@ -1025,42 +1025,57 @@ local-time[data-abs-hidden] {
 /* ── Toggle Chevron (right edge) ── */
 .ghh-toggle-chevron {
   position: absolute;
-  right: -14px;
+  right: -16px;
   top: 50%;
   transform: translateY(-50%);
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
-  background: linear-gradient(135deg, #1c2128 0%, #0d1117 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  background: linear-gradient(145deg, #21262d 0%, #0d1117 100%);
   color: #e6edf3;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 10001;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
   padding: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .ghh-toggle-chevron:hover {
-  background: linear-gradient(135deg, #272d36 0%, #161b22 100%);
+  background: linear-gradient(145deg, #2d333b 0%, #161b22 100%);
   color: #ffffff;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(88, 166, 255, 0.3);
-  border-color: rgba(88, 166, 255, 0.4);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.6),
+    0 0 0 1.5px rgba(88, 166, 255, 0.4),
+    0 0 20px rgba(88, 166, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-color: rgba(88, 166, 255, 0.5);
+  transform: translateY(-50%) scale(1.08);
 }
 
 .ghh-toggle-chevron:active {
-  transform: translateY(-50%) scale(0.92);
+  transform: translateY(-50%) scale(0.95);
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.5),
+    0 0 0 1.5px rgba(88, 166, 255, 0.3);
 }
 
 .ghh-sidebar.ghh-open .ghh-toggle-chevron {
   transform: translateY(-50%) rotate(180deg);
 }
 
+.ghh-sidebar.ghh-open .ghh-toggle-chevron:hover {
+  transform: translateY(-50%) rotate(180deg) scale(1.08);
+}
+
 .ghh-sidebar.ghh-open .ghh-toggle-chevron:active {
-  transform: translateY(-50%) rotate(180deg) scale(0.92);
+  transform: translateY(-50%) rotate(180deg) scale(0.95);
 }
 
 /* ── Expanded Panel ── */
@@ -1133,21 +1148,9 @@ local-time[data-abs-hidden] {
   50% { opacity: 0.5; transform: scale(1.4); }
 }
 
-/* Close / collapse button inside expanded panel */
+/* Close / collapse button inside expanded panel — hidden, using chevron instead */
 .ghh-header-close {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: var(--ghh-text-secondary);
-  font-size: 16px;
-  cursor: pointer;
-  transition: background 150ms ease, color 150ms ease;
+  display: none;
 }
 
 .ghh-header-close:hover {
