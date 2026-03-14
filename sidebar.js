@@ -215,16 +215,6 @@
             <div class="ghh-signals" id="ghh-signals"></div>
           </div>
 
-          <div class="ghh-divider ghh-section-repo-only"></div>
-
-          <!-- Star History -->
-          <div class="ghh-section-repo-only" id="ghh-section-stars">
-            <div class="ghh-section-title">Star History</div>
-            <div class="ghh-star-history" id="ghh-star-history">
-              <div class="ghh-loading-text">Loading...</div>
-            </div>
-          </div>
-
           <div class="ghh-divider"></div>
 
           <!-- Watchlist -->
@@ -322,7 +312,6 @@
 
     if (isRepo) {
       loadHealthScore(parsed.owner, parsed.repo);
-      loadStarHistory(parsed.owner, parsed.repo);
     }
 
     loadWatchlist();
@@ -426,38 +415,7 @@
     ).join('');
   }
 
-  async function loadStarHistory(owner, repo) {
-    const container = document.getElementById('ghh-star-history');
-    if (!container) return;
-    container.innerHTML = '<div class="ghh-loading-text">Loading...</div>';
 
-    try {
-      const resp = await sidebarSendMessage({
-        type: 'GET_STAR_HISTORY',
-        payload: { owner, repo }
-      });
-
-      if (!resp || !resp.data) {
-        container.innerHTML = '<div class="ghh-empty">No star data</div>';
-        return;
-      }
-
-      const data = resp.data;
-      if (data.unavailable) {
-        container.innerHTML = '<div class="ghh-empty">Star history unavailable</div>';
-        return;
-      }
-
-      const svg = buildSparklineSvg(data.points || []);
-      const growth = data.estimatedMonthlyGrowth || data.monthlyGrowth;
-      container.innerHTML = svg +
-        (growth != null
-          ? '<div class="ghh-star-growth">~' + formatNumber(growth) + ' stars/month</div>'
-          : '');
-    } catch (_) {
-      container.innerHTML = '<div class="ghh-empty">Failed to load</div>';
-    }
-  }
 
   async function loadWatchlist() {
     const container = document.getElementById('ghh-watchlist');
