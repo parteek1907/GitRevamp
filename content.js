@@ -152,15 +152,25 @@ function isProfileRoot(segments) {
 }
 
 function handleRepoPage(owner, repo) {
-  const title =
+  let title =
     document.querySelector('[data-testid="repository-container-header"] h1') ||
     document.querySelector('#repository-container-header h1') ||
     document.querySelector('main > div h1:first-of-type') ||
     document.querySelector('h1[class*="d-flex"]');
 
+  // Modern GitHub: repo name is in strong[itemprop="name"] inside a breadcrumb nav
+  if (!title) {
+    const strong = document.querySelector('#repository-container-header strong[itemprop="name"]') ||
+                   document.querySelector('strong[itemprop="name"]');
+    if (strong) {
+      title = strong.closest('a') || strong;
+    }
+  }
+
   if (!title) return;
-  // Check if badge already exists rather than using attribute on persistent h1
+  // Check if badge already exists
   if (title.nextElementSibling && title.nextElementSibling.classList.contains('gh-health-badge')) return;
+  if (title.parentElement && title.parentElement.querySelector('.gh-health-badge')) return;
   renderBadgeForTarget(title, owner, repo, 'page');
 }
 
@@ -615,7 +625,7 @@ const enhancedGithubHandlersUtil = {
         return;
       }
 
-      const containerItems = document.querySelectorAll('table > tbody > tr.react-directory-row');
+      const containerItems = document.querySelectorAll('table > tbody > tr.react-directory-row, table > tbody > tr[class*="DirectoryContent"]');
       const firstCell = document.querySelectorAll('tbody tr > td:nth-child(1)')[0];
 
       if (!containerItems.length || !firstCell) {
@@ -627,8 +637,15 @@ const enhancedGithubHandlersUtil = {
           break;
         }
 
-        const commitElem = containerItems[i].querySelector('td > div.react-directory-commit-age');
-        if (!commitElem || !commitElem.parentElement || !commitElem.parentElement.previousElementSibling) {
+        // Find the commit age column - try legacy class first, then modern DOM heuristics
+        let commitElem = containerItems[i].querySelector('td > div.react-directory-commit-age');
+        let commitAgeTd = commitElem ? commitElem.parentElement : null;
+        if (!commitAgeTd) {
+          // Modern GitHub: find the last td (commit age column) via relative-time or last-child
+          const relTime = containerItems[i].querySelector('relative-time');
+          commitAgeTd = relTime ? relTime.closest('td') : containerItems[i].querySelector('td:last-child');
+        }
+        if (!commitAgeTd || !commitAgeTd.previousElementSibling) {
           actualDataIndex++;
           continue;
         }
@@ -636,7 +653,7 @@ const enhancedGithubHandlersUtil = {
         const isValidFile = (data[actualDataIndex].type === 'file' && data[actualDataIndex].size !== 0) || (data[actualDataIndex].type === 'symlink');
 
         firstCell.setAttribute('colspan', '6');
-        commitElem.parentElement.previousElementSibling.setAttribute('colspan', '3');
+        commitAgeTd.previousElementSibling.setAttribute('colspan', '3');
 
         if (isValidFile) {
           const formattedFileSize = enhancedGithubCommonUtil.getFileSizeAndUnit(data[actualDataIndex]);
@@ -644,7 +661,7 @@ const enhancedGithubHandlersUtil = {
           const fileName = data[actualDataIndex].name;
           const fileDlId = 'eg-file-dl-' + actualDataIndex;
 
-          commitElem.parentElement.insertAdjacentHTML('beforebegin', `
+          commitAgeTd.insertAdjacentHTML('beforebegin', `
             <td class="eg-download">
               <div class="eg-file-cell" id="${fileDlId}" data-url="${fileUrl}" data-name="${fileName}" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
                 <span class="react-directory-download Link--secondary">${formattedFileSize}</span>
@@ -689,7 +706,7 @@ const enhancedGithubHandlersUtil = {
           const folderName = data[actualDataIndex].name;
           const btnId = 'eg-folder-dl-' + actualDataIndex;
           const sizeSpanId = 'eg-folder-size-' + actualDataIndex;
-          commitElem.parentElement.insertAdjacentHTML('beforebegin', `
+          commitAgeTd.insertAdjacentHTML('beforebegin', `
             <td class="eg-download">
               <div class="eg-folder-cell" id="${btnId}" data-folder-path="${folderPath}" data-folder-name="${folderName}" style="position:relative;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
                 <span id="${sizeSpanId}" class="react-directory-download Link--secondary">...</span>
@@ -746,7 +763,7 @@ const enhancedGithubHandlersUtil = {
             }
           }, 0);
         } else {
-          commitElem.parentElement.insertAdjacentHTML('beforebegin', '<td class="eg-download"><div class="react-directory-download"></div></td>');
+          commitAgeTd.insertAdjacentHTML('beforebegin', '<td class="eg-download"><div class="react-directory-download"></div></td>');
         }
         actualDataIndex++;
       }
@@ -1783,16 +1800,25 @@ async function injectVSCodeFileIcons(owner, repo) {
 
     const fileLink = row.querySelector('a[href*="/' + owner + '/' + repo + '/blob/"]');
     const folderLink = row.querySelector('a[href*="/' + owner + '/' + repo + '/tree/"]');
+    if (!fileLink && !folderLink) return;
+
+    // Already has our icon
+    if (row.querySelector('img[data-vsicon]')) return;
+
     const existingIcon =
       row.querySelector('svg.octicon-file-directory-fill') ||
       row.querySelector('svg.octicon-file-directory') ||
       row.querySelector('svg.octicon-file') ||
       row.querySelector('svg[class*="octicon"]') ||
-      row.querySelector('svg[aria-hidden="true"]') ||
-      row.querySelector('img[data-vsicon]');
+      row.querySelector('svg[aria-label="Directory"]') ||
+      row.querySelector('svg[aria-label="File"]') ||
+      row.querySelector('svg[aria-label="Submodule"]') ||
+      row.querySelector('svg[aria-label="Symlink File"]') ||
+      row.querySelector('svg[aria-label="Symlink Directory"]') ||
+      row.querySelector('svg[role="img"]') ||
+      row.querySelector('svg[aria-hidden="true"]');
 
     if (!existingIcon) return;
-    if (!fileLink && !folderLink) return;
 
     const link = fileLink || folderLink;
     const isFolder = Boolean(folderLink);
@@ -1818,7 +1844,8 @@ async function injectVSCodeFileIcons(owner, repo) {
       img.onerror = null;
     };
 
-    existingIcon.replaceWith(img);
+    existingIcon.style.display = 'none';
+    existingIcon.insertAdjacentElement('afterend', img);
     row.setAttribute('data-vsicon-row', 'true');
   });
 }
@@ -2047,40 +2074,65 @@ async function injectLOCInSidebar(owner, repo) {
     '<span class="gh-loc-stat-number">...</span> lines of code' +
     '</a>';
 
-  // Find the stats UL (contains stars/watching/forks)
+  // Find the stats container (stars/watching/forks)
   var forkLink = sidebar.querySelector('a[href$="/forks"]') ||
                  sidebar.querySelector('a[href$="/network/members"]') ||
                  document.querySelector('a[href$="/forks"]');
-  var statsUl = null;
+  var statsContainer = null;
 
   console.log('[GH-LOC] forkLink found:', !!forkLink, forkLink?.href);
 
   if (forkLink) {
-    // Walk up to find the UL that contains the stats
-    statsUl = forkLink.closest('ul');
-    if (!statsUl) {
-      // Maybe it's in an li, go up further
+    // Try UL first (legacy GitHub), then any common parent container
+    statsContainer = forkLink.closest('ul');
+    if (!statsContainer) {
       var li = forkLink.closest('li');
-      if (li) statsUl = li.parentElement;
+      if (li) statsContainer = li.parentElement;
     }
-    console.log('[GH-LOC] statsUl from forkLink:', !!statsUl, statsUl?.tagName, statsUl?.className?.substring(0, 80));
+    // Modern GitHub: stats might be in a div-based layout
+    if (!statsContainer || statsContainer === sidebar) {
+      var forkParent = forkLink.parentElement;
+      if (forkParent) {
+        statsContainer = forkParent.parentElement;
+      }
+    }
+    console.log('[GH-LOC] statsContainer from forkLink:', !!statsContainer, statsContainer?.tagName, statsContainer?.className?.substring(0, 80));
   }
 
-  if (!statsUl) {
+  if (!statsContainer || statsContainer === sidebar) {
     var starLink = sidebar.querySelector('a[href$="/stargazers"]') ||
                    document.querySelector('a[href$="/stargazers"]');
     if (starLink) {
-      statsUl = starLink.closest('ul');
-      if (!statsUl) {
+      statsContainer = starLink.closest('ul');
+      if (!statsContainer) {
         var li2 = starLink.closest('li');
-        if (li2) statsUl = li2.parentElement;
+        if (li2) statsContainer = li2.parentElement;
+      }
+      if (!statsContainer || statsContainer === sidebar) {
+        var starParent = starLink.parentElement;
+        if (starParent) statsContainer = starParent.parentElement;
       }
     }
   }
 
-  if (statsUl && statsUl.tagName === 'UL') {
-    statsUl.appendChild(locRow);
-    console.log('[GH-LOC] appended to stats UL:', statsUl.className?.substring(0, 80));
+  // Adapt the locRow element type to match the container
+  if (statsContainer && statsContainer.tagName === 'UL') {
+    // Legacy: use li element (already set)
+    statsContainer.appendChild(locRow);
+    console.log('[GH-LOC] appended to stats UL:', statsContainer.className?.substring(0, 80));
+  } else if (statsContainer && statsContainer !== sidebar) {
+    // Modern GitHub: container is a div, convert locRow to a div-based element
+    var locDiv = document.createElement('div');
+    locDiv.className = 'gh-loc-stat-row';
+    locDiv.style.cursor = 'pointer';
+    locDiv.innerHTML = locRow.innerHTML;
+    locDiv.addEventListener('click', function () {
+      openLOCModal(owner, repo, locModalData);
+    });
+    statsContainer.appendChild(locDiv);
+    // Replace locRow reference for later API update
+    locRow = locDiv;
+    console.log('[GH-LOC] appended to stats container:', statsContainer.tagName, statsContainer.className?.substring(0, 80));
   } else {
     // Fallback: try inserting after the forks link parent
     var fallbackParent = forkLink ? (forkLink.closest('.d-flex') || forkLink.parentElement?.parentElement) : null;
