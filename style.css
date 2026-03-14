@@ -781,3 +781,16 @@
     background: #30363d;
   }
 }
+
+/* Absolute date replacement */
+relative-time[data-abs-hidden],
+time-ago[data-abs-hidden],
+local-time[data-abs-hidden] {
+  display: none !important;
+}
+
+.gh-abs-date-span {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
