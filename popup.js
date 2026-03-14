@@ -43,7 +43,7 @@ function bindTabs() {
       document.querySelectorAll('.tab-panel').forEach((panel) => {
         panel.classList.toggle('is-active', panel.id === `tab-${button.dataset.tab}`);
       });
-      if (button.dataset.tab === 'notifications') {
+      if (button.dataset.tab === 'notifs') {
         startNotificationsRefresh();
       } else if (notificationsTimer) {
         clearInterval(notificationsTimer);
@@ -64,9 +64,10 @@ function bindActions() {
 
   const toggleIds = [
     'toggle-search', 'toggle-trending', 'toggle-deps', 'toggle-bus-factor', 'toggle-license-risk',
-    'toggle-readme-toc', 'toggle-folder-sizes', 'toggle-pr-complexity', 'toggle-todo', 'toggle-insights',
+    'toggle-readme-toc', 'toggle-pr-complexity', 'toggle-todo', 'toggle-insights',
     'toggle-issue-age', 'toggle-file-icons', 'toggle-quick-clone', 'toggle-star-history', 'toggle-commit-quality',
-    'toggle-file-download', 'toggle-folder-zip', 'toggle-open-ide', 'toggle-loc'
+    'toggle-file-enhancements', 'toggle-md-printer',
+    'toggle-vsicons', 'toggle-webide', 'toggle-loc-sidebar', 'toggle-abs-dates', 'toggle-health-sidebar'
   ];
   toggleIds.forEach((id) => {
     document.getElementById(id)?.addEventListener('change', () => {
@@ -74,12 +75,15 @@ function bindActions() {
     });
   });
 
-  document.getElementById('default-editor')?.addEventListener('change', () => {
-    saveSettings().catch(logError);
-  });
-
-  document.getElementById('preferred-online-ide')?.addEventListener('change', () => {
-    saveSettings().catch(logError);
+  document.getElementById('save-abs-settings')?.addEventListener('click', async () => {
+    const timeFormat = document.querySelector('input[name="abs-time-format"]:checked')?.value || '24h';
+    const dateFormat = (document.getElementById('abs-date-format')?.value || '').trim();
+    const colorCode = document.getElementById('toggle-abs-color')?.checked !== false;
+    await chrome.storage.local.set({
+      gh_abs_time_format: timeFormat,
+      gh_abs_date_format: dateFormat,
+      gh_abs_color_code: colorCode
+    });
   });
 
   document.getElementById('clear-cache')?.addEventListener('click', async () => {
@@ -273,7 +277,6 @@ async function loadSettings() {
   setCheckbox('toggle-bus-factor', data.showBusFactor !== false);
   setCheckbox('toggle-license-risk', data.showLicenseRisk !== false);
   setCheckbox('toggle-readme-toc', data.showReadmeToc !== false);
-  setCheckbox('toggle-folder-sizes', data.showFolderSizes !== false);
   setCheckbox('toggle-pr-complexity', data.showPrComplexity !== false);
   setCheckbox('toggle-todo', data.showTodoHighlights !== false);
   setCheckbox('toggle-insights', data.showContributionInsights !== false);
@@ -282,25 +285,27 @@ async function loadSettings() {
   setCheckbox('toggle-quick-clone', data.showQuickClone !== false);
   setCheckbox('toggle-star-history', data.showStarHistory !== false);
   setCheckbox('toggle-commit-quality', data.showCommitQuality !== false);
-  setCheckbox('toggle-file-download', data.showFileDownloadButtons !== false);
-  setCheckbox('toggle-folder-zip', data.showFolderZipDownload !== false);
-  setCheckbox('toggle-open-ide', data.showOpenInIde !== false);
-  setCheckbox('toggle-loc', data.showLoc !== false);
+  setCheckbox('toggle-file-enhancements', data.showFileEnhancements !== false);
+  setCheckbox('toggle-md-printer', data.showMarkdownPrinter !== false);
+  setCheckbox('toggle-vsicons', data.showVSIcons !== false);
+  setCheckbox('toggle-webide', data.showWebIDE !== false);
+  setCheckbox('toggle-loc-sidebar', data.showLOCSidebar !== false);
+  setCheckbox('toggle-abs-dates', data.showAbsoluteDates !== false);
+  setCheckbox('toggle-health-sidebar', data.showHealthSidebar !== false);
 
   const tokenInput = document.getElementById('github-token');
   if (tokenInput) tokenInput.value = data.github_pat || '';
 
-  const editor = document.getElementById('default-editor');
-  if (editor) editor.value = data.preferred_editor || 'vscode';
-
-  const onlineIde = document.getElementById('preferred-online-ide');
-  if (onlineIde) onlineIde.value = data.preferred_online_ide || 'github-dev';
+  const absTimeSettings = await chrome.storage.local.get(['gh_abs_time_format', 'gh_abs_date_format', 'gh_abs_color_code']);
+  const absTimeRadio = document.querySelector(`input[name="abs-time-format"][value="${absTimeSettings.gh_abs_time_format || '24h'}"]`);
+  if (absTimeRadio) absTimeRadio.checked = true;
+  const absDateInput = document.getElementById('abs-date-format');
+  if (absDateInput) absDateInput.value = absTimeSettings.gh_abs_date_format || '';
+  setCheckbox('toggle-abs-color', absTimeSettings.gh_abs_color_code !== false);
 }
 
 async function saveSettings() {
   const githubPat = (document.getElementById('github-token')?.value || '').trim();
-  const preferredEditor = (document.getElementById('default-editor')?.value || 'vscode').trim();
-  const preferredOnlineIde = (document.getElementById('preferred-online-ide')?.value || 'github-dev').trim();
 
   await sendMessage({
     type: 'SET_SETTINGS',
@@ -311,7 +316,6 @@ async function saveSettings() {
       showBusFactor: isChecked('toggle-bus-factor'),
       showLicenseRisk: isChecked('toggle-license-risk'),
       showReadmeToc: isChecked('toggle-readme-toc'),
-      showFolderSizes: isChecked('toggle-folder-sizes'),
       showPrComplexity: isChecked('toggle-pr-complexity'),
       showTodoHighlights: isChecked('toggle-todo'),
       showContributionInsights: isChecked('toggle-insights'),
@@ -320,12 +324,13 @@ async function saveSettings() {
       showQuickClone: isChecked('toggle-quick-clone'),
       showStarHistory: isChecked('toggle-star-history'),
       showCommitQuality: isChecked('toggle-commit-quality'),
-      showFileDownloadButtons: isChecked('toggle-file-download'),
-      showFolderZipDownload: isChecked('toggle-folder-zip'),
-      showOpenInIde: isChecked('toggle-open-ide'),
-      showLoc: isChecked('toggle-loc'),
-      preferred_online_ide: preferredOnlineIde,
-      preferred_editor: preferredEditor,
+      showFileEnhancements: isChecked('toggle-file-enhancements'),
+      showMarkdownPrinter: isChecked('toggle-md-printer'),
+      showVSIcons: isChecked('toggle-vsicons'),
+      showWebIDE: isChecked('toggle-webide'),
+      showLOCSidebar: isChecked('toggle-loc-sidebar'),
+      showAbsoluteDates: isChecked('toggle-abs-dates'),
+      showHealthSidebar: isChecked('toggle-health-sidebar'),
       github_pat: githubPat
     }
   });
@@ -364,7 +369,7 @@ async function loadBookmarks() {
   });
 
   if (!filtered.length) {
-    content.appendChild(makeMessage('No bookmarks yet. Click ?? on any repo to save it.'));
+    content.appendChild(makeMessage('No saved repos yet. Click Bookmark on any repo to save it.'));
     return;
   }
 
@@ -507,10 +512,10 @@ function startNotificationsRefresh() {
 
 function notificationIcon(type) {
   const map = {
-    Issue: '?',
-    PullRequest: '?',
-    Release: '?',
-    Discussion: '?'
+    Issue: '🐞',
+    PullRequest: '🔀',
+    Release: '🏷️',
+    Discussion: '💬'
   };
   return map[type] || '•';
 }
@@ -533,13 +538,13 @@ async function renderRateLimitFooter() {
   if (rateLimit.remaining === 0) {
     const minutes = rateLimit.reset ? Math.max(1, Math.ceil(((rateLimit.reset * 1000) - Date.now()) / 60000)) : 0;
     statusLine.classList.add('rate-line-danger');
-    statusLine.textContent = `? Rate limited - reset in ${minutes} minutes`;
+    statusLine.textContent = `⏳ Rate limited - reset in ${minutes} minutes`;
   } else if (rateLimit.remaining <= 20) {
     statusLine.classList.add('rate-line-warn');
-    statusLine.textContent = `? API limit low: ${rateLimit.remaining} left`;
+    statusLine.textContent = `⚠️ API limit low: ${rateLimit.remaining} left`;
   } else {
     statusLine.classList.add('rate-line-ok');
-    statusLine.textContent = `? API: ${rateLimit.remaining}/${rateLimit.limit} calls left`;
+    statusLine.textContent = `✅ API: ${rateLimit.remaining}/${rateLimit.limit} calls left`;
   }
 
   status.appendChild(statusLine);
@@ -570,7 +575,7 @@ function buildOverviewCard(repoInfo, data, history) {
   watchButton.type = 'button';
   watchButton.className = 'btn btn-primary btn-watch';
   const watching = isWatchlisted(repoInfo.owner, repoInfo.repo);
-  watchButton.textContent = watching ? '? Watching this repo' : '?? Watch this repo';
+  watchButton.textContent = watching ? '✓ Watching' : '+ Watch';
   watchButton.addEventListener('click', async () => {
     if (isWatchlisted(repoInfo.owner, repoInfo.repo)) {
       await sendMessage({ type: 'REMOVE_FROM_WATCHLIST', payload: repoInfo });
@@ -612,7 +617,7 @@ function buildOverviewCard(repoInfo, data, history) {
     const trend = document.createElement('div');
     trend.className = 'trend-card';
     trend.appendChild(makeInlineText('Trend', 'section-kicker'));
-    trend.insertAdjacentHTML('beforeend', buildSparklineSvg(history.map((entry) => entry.score), getColorClass(data.score), 'popup-sparkline'));
+    trend.insertAdjacentHTML('beforeend', buildSparklineSvg(history.map((entry) => entry.score), data.score, 'popup-sparkline'));
     wrapper.appendChild(trend);
   }
 
@@ -706,12 +711,12 @@ function buildScoreDelta(scoreState) {
   const change = round1(scoreState.currentScore - scoreState.previousScore);
   if (change > 0) {
     delta.className = 'score-delta score-delta-up';
-    delta.textContent = `? ${change.toFixed(1)}`;
+    delta.textContent = `↗ ${change.toFixed(1)}`;
   } else if (change < 0) {
     delta.className = 'score-delta score-delta-down';
-    delta.textContent = `? ${Math.abs(change).toFixed(1)}`;
+    delta.textContent = `↘ ${Math.abs(change).toFixed(1)}`;
   } else {
-    delta.textContent = '? 0.0';
+    delta.textContent = `→ 0.0`;
   }
 
   return delta;
@@ -912,7 +917,7 @@ function isWatchlisted(owner, repo) {
   return currentWatchlist.some((item) => item.owner === owner && item.repo === repo);
 }
 
-function buildSparklineSvg(scores, colorClass, className) {
+function buildSparklineSvg(scores, score, className) {
   const width = 120;
   const height = 30;
   const padding = 3;
@@ -924,7 +929,7 @@ function buildSparklineSvg(scores, colorClass, className) {
     const y = height - padding - ((value - min) / range) * (height - padding * 2);
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   });
-  const stroke = getScoreColor(colorClass === 'green' ? 8 : colorClass === 'yellow' ? 5 : 2);
+  const stroke = getScoreColor(score);
   return `<svg class="${className}" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><polyline points="${points.join(' ')}" stroke="${stroke}" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 }
 

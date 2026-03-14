@@ -1,8 +1,5 @@
-// NOTE: jszip.min.js must be present in extension root.
-// Download from: https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js
 const CACHE_TTL_HEALTH = 6 * 60 * 60 * 1000;
 const CACHE_TTL_DEPS = 24 * 60 * 60 * 1000;
-const CACHE_TTL_TREE = 24 * 60 * 60 * 1000;
 const CACHE_TTL_PR = 60 * 60 * 1000;
 const CACHE_TTL_STAR_HISTORY = 12 * 60 * 60 * 1000;
 const CACHE_TTL_LOC = 24 * 60 * 60 * 1000;
@@ -29,7 +26,6 @@ const DEFAULT_SETTINGS = {
   showBusFactor: true,
   showLicenseRisk: true,
   showReadmeToc: true,
-  showFolderSizes: true,
   showPrComplexity: true,
   showTodoHighlights: true,
   showContributionInsights: true,
@@ -38,12 +34,13 @@ const DEFAULT_SETTINGS = {
   showQuickClone: true,
   showStarHistory: true,
   showCommitQuality: true,
-  showFileDownloadButtons: true,
-  showFolderZipDownload: true,
-  showOpenInIde: true,
-  showLoc: true,
-  preferred_online_ide: 'github-dev',
-  preferred_editor: 'vscode'
+  showFileEnhancements: true,
+  showMarkdownPrinter: true,
+  showVSIcons: true,
+  showWebIDE: true,
+  showLOCSidebar: true,
+  showAbsoluteDates: true,
+  showHealthSidebar: true
 };
 
 const SAFE_LICENSES = new Set([
@@ -56,12 +53,10 @@ const COPYLEFT_LICENSES = new Set([
 chrome.runtime.onInstalled.addListener(() => {
   ensureDefaults().catch(logError);
   chrome.alarms.create('watchlist-check', { periodInMinutes: 360 });
-  ensureGitZipContextMenu();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   chrome.alarms.create('watchlist-check', { periodInMinutes: 360 });
-  ensureGitZipContextMenu();
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
@@ -96,30 +91,6 @@ chrome.commands.onCommand.addListener((command) => {
   }
 });
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId !== 'gitzip-download' || !info.linkUrl || !tab?.id) return;
-  const parsed = parseGitHubLink(info.linkUrl);
-  if (!parsed) return;
-
-  if (parsed.kind === 'tree') {
-    chrome.tabs.sendMessage(tab.id, {
-      type: 'CONTEXT_DOWNLOAD_FOLDER_ZIP',
-      payload: parsed
-    });
-  } else if (parsed.kind === 'blob') {
-    chrome.tabs.sendMessage(tab.id, {
-      type: 'CONTEXT_DOWNLOAD_SINGLE_FILE',
-      payload: {
-        owner: parsed.owner,
-        repo: parsed.repo,
-        branch: parsed.branch,
-        filePath: parsed.path,
-        fileName: parsed.path.split('/').pop() || 'file'
-      }
-    });
-  }
-});
-
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   routeMessage(message, sender)
     .then((payload) => sendResponse({ success: true, ...payload }))
@@ -131,29 +102,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
   return true;
 });
-
-function ensureGitZipContextMenu() {
-  try {
-    chrome.contextMenus.remove('gitzip-download', () => {
-      // Reading lastError prevents unchecked runtime warnings when the item does not exist.
-      void chrome.runtime.lastError;
-      try {
-        chrome.contextMenus.create({
-          id: 'gitzip-download',
-          title: 'Download as ZIP',
-          contexts: ['link'],
-          documentUrlPatterns: ['https://github.com/*']
-        }, () => {
-          void chrome.runtime.lastError;
-        });
-      } catch (_error) {
-        // ignore context menu setup errors
-      }
-    });
-  } catch (_error) {
-    // ignore context menu setup errors
-  }
-}
 
 async function routeMessage(message, sender) {
   switch (message.type) {
@@ -207,11 +155,6 @@ async function routeMessage(message, sender) {
       await clearCachedData();
       return {};
     }
-    case 'GET_REPO_TREE_SIZES': {
-      const payload = message.payload || {};
-      const data = await getRepoTreeSizes(payload.owner, payload.repo);
-      return { data };
-    }
     case 'GET_PR_COMPLEXITY': {
       const payload = message.payload || {};
       const data = await getPrComplexity(payload.owner, payload.repo, payload.number);
@@ -225,11 +168,6 @@ async function routeMessage(message, sender) {
     case 'GET_LOC': {
       const payload = message.payload || {};
       const data = await getLocData(payload.owner, payload.repo);
-      return { data };
-    }
-    case 'GET_FOLDER_ZIP': {
-      const payload = message.payload || {};
-      const data = await getFolderZipData(payload, sender?.tab?.id);
       return { data };
     }
     case 'GET_NOTIFICATIONS': {
@@ -593,6 +531,7 @@ function calculateHealthScore(rawData, deps) {
     score,
     status,
     repoName: repoData.full_name,
+    size: Number(repoData.size) || 0,
     activityScore: round1(activityScore),
     maintenanceScore: round1(maintenanceScore),
     popularityScore: round1(popularityScore),
@@ -723,73 +662,6 @@ async function auditPackage(name) {
   return { name, isOutdated, hasVulns };
 }
 
-async function getRepoTreeSizes(owner, repo) {
-  const headers = await buildGitHubHeaders();
-  const base = `https://api.github.com/repos/${owner}/${repo}`;
-
-  const repoResponse = await trackedGitHubFetch(base, headers);
-  if (!repoResponse.ok) {
-    throw new Error('TREE_FETCH_FAILED');
-  }
-  const repoData = await repoResponse.json();
-  const branch = repoData.default_branch;
-
-  const refResponse = await trackedGitHubFetch(`${base}/git/refs/heads/${encodeURIComponent(branch)}`, headers);
-  if (!refResponse.ok) {
-    throw new Error('TREE_FETCH_FAILED');
-  }
-  const refData = await refResponse.json();
-  const sha = refData && refData.object && refData.object.sha;
-  if (!sha) {
-    throw new Error('TREE_FETCH_FAILED');
-  }
-
-  const cacheKey = `tree_${owner}_${repo}_${sha}`;
-  const cached = await getCached(cacheKey, CACHE_TTL_TREE);
-  if (cached) {
-    return cached;
-  }
-
-  const treeResponse = await trackedGitHubFetch(`${base}/git/trees/${sha}?recursive=1`, headers);
-  if (!treeResponse.ok) {
-    throw new Error('TREE_FETCH_FAILED');
-  }
-  const treeData = await treeResponse.json();
-  const tree = Array.isArray(treeData.tree) ? treeData.tree : [];
-
-  const fileSizes = {};
-  const topFolders = {};
-  let totalSize = 0;
-  let totalFiles = 0;
-
-  tree.forEach((entry) => {
-    if (!entry || entry.type !== 'blob') return;
-    const path = entry.path || '';
-    const size = Number(entry.size) || 0;
-    fileSizes[path] = size;
-    totalSize += size;
-    totalFiles += 1;
-
-    const top = path.includes('/') ? path.split('/')[0] : path;
-    if (!topFolders[top]) topFolders[top] = 0;
-    topFolders[top] += size;
-  });
-
-  const payload = {
-    owner,
-    repo,
-    sha,
-    defaultBranch: branch,
-    totalSize,
-    totalFiles,
-    topFolders,
-    fileSizes
-  };
-
-  await setCached(cacheKey, payload);
-  return payload;
-}
-
 async function getPrComplexity(owner, repo, number) {
   const num = Number(number);
   if (!Number.isFinite(num)) {
@@ -868,31 +740,55 @@ async function getStarHistory(owner, repo) {
   const headers = await buildGitHubHeaders();
   headers.Accept = 'application/vnd.github.v3.star+json';
 
-  const repoResponse = await trackedGitHubFetch(`https://api.github.com/repos/${owner}/${repo}`, await buildGitHubHeaders());
-  if (!repoResponse.ok) {
-    throw new Error('STAR_HISTORY_FAILED');
-  }
-  const repoData = await repoResponse.json();
-  const totalStars = Number(repoData.stargazers_count) || 0;
+  let totalStars = 0;
+  let criticalFailed = false;
 
-  const page1 = await trackedGitHubFetch(`https://api.github.com/repos/${owner}/${repo}/stargazers?per_page=100&page=1`, headers);
-  if (!page1.ok) {
-    throw new Error('STAR_HISTORY_FAILED');
+  try {
+    const repoResponse = await trackedGitHubFetch(`https://api.github.com/repos/${owner}/${repo}`, await buildGitHubHeaders());
+    if (!repoResponse.ok) {
+      criticalFailed = true;
+    } else {
+      const repoData = await repoResponse.json();
+      totalStars = Number(repoData.stargazers_count) || 0;
+    }
+  } catch (_error) {
+    criticalFailed = true;
   }
-  const firstBatch = await page1.json();
-  const linkHeader = page1.headers.get('Link') || '';
-  const lastPage = parseLastPage(linkHeader);
-  const midPage = Math.max(1, Math.floor(lastPage / 2));
 
+  let firstBatch = [];
   let middleBatch = [];
   let lastBatch = [];
+  let lastPage = 1;
+
+  try {
+    const page1 = await trackedGitHubFetch(`https://api.github.com/repos/${owner}/${repo}/stargazers?per_page=100&page=1`, headers);
+    if (!page1.ok) {
+      criticalFailed = true;
+    } else {
+      firstBatch = await page1.json();
+      const linkHeader = page1.headers.get('Link') || '';
+      lastPage = parseLastPage(linkHeader);
+    }
+  } catch (_error) {
+    criticalFailed = true;
+  }
+
+  const midPage = Math.max(1, Math.floor(lastPage / 2));
   if (midPage > 1) {
-    const midResponse = await trackedGitHubFetch(`https://api.github.com/repos/${owner}/${repo}/stargazers?per_page=100&page=${midPage}`, headers);
-    if (midResponse.ok) middleBatch = await midResponse.json();
+    try {
+      const midResponse = await trackedGitHubFetch(`https://api.github.com/repos/${owner}/${repo}/stargazers?per_page=100&page=${midPage}`, headers);
+      if (midResponse.ok) middleBatch = await midResponse.json();
+    } catch (_error) {
+      middleBatch = [];
+    }
   }
   if (lastPage > 1) {
-    const lastResponse = await trackedGitHubFetch(`https://api.github.com/repos/${owner}/${repo}/stargazers?per_page=100&page=${lastPage}`, headers);
-    if (lastResponse.ok) lastBatch = await lastResponse.json();
+    try {
+      const lastResponse = await trackedGitHubFetch(`https://api.github.com/repos/${owner}/${repo}/stargazers?per_page=100&page=${lastPage}`, headers);
+      if (lastResponse.ok) lastBatch = await lastResponse.json();
+    } catch (_error) {
+      lastBatch = [];
+    }
   }
 
   const allSample = []
@@ -910,11 +806,22 @@ async function getStarHistory(owner, repo) {
   const daysSpan = firstStarTs ? Math.max(1, Math.round((now - firstStarTs) / 86400000)) : null;
   const monthlyGrowth = daysSpan ? Math.round((totalStars / daysSpan) * 30) : null;
 
-  const points = [];
-  for (let i = 0; i < 5; i += 1) {
-    const ratio = i / 4;
-    const y = Math.max(0, Math.round(totalStars * ratio));
-    points.push({ x: i, y });
+  let points = [];
+  if (sampleDates.length > 0) {
+    const startTs = sampleDates[0];
+    const span = Math.max(1, now - startTs);
+    points = Array.from({ length: 5 }, (_, i) => {
+      const threshold = startTs + Math.round((span * i) / 4);
+      const sampledCount = sampleDates.filter((ts) => ts <= threshold).length;
+      const ratio = sampleDates.length ? sampledCount / sampleDates.length : 0;
+      return { x: i, y: Math.max(0, Math.round(totalStars * ratio)) };
+    });
+  } else {
+    for (let i = 0; i < 5; i += 1) {
+      const ratio = i / 4;
+      const y = Math.max(0, Math.round(totalStars * ratio));
+      points.push({ x: i, y });
+    }
   }
 
   const payload = {
@@ -926,6 +833,11 @@ async function getStarHistory(owner, repo) {
     currentTotal: totalStars,
     points
   };
+
+  if (criticalFailed) {
+    payload.unavailable = true;
+    payload.error = 'STAR_HISTORY_FAILED';
+  }
 
   await setCached(cacheKey, payload);
   return payload;
@@ -968,81 +880,6 @@ async function getLocData(owner, repo) {
   }
 }
 
-async function getFolderZipData(payload, tabId) {
-  const owner = payload.owner;
-  const repo = payload.repo;
-  const branch = payload.branch;
-  const folderPath = (payload.folderPath || '').replace(/^\/+/, '').replace(/\/+$/, '');
-  const countOnly = Boolean(payload.countOnly);
-  const headers = await buildGitHubHeaders();
-
-  const treeResponse = await trackedGitHubFetch(
-    `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
-    headers
-  );
-  if (!treeResponse.ok) {
-    throw new Error('ZIP_TREE_FAILED');
-  }
-
-  const treeData = await treeResponse.json();
-  const items = Array.isArray(treeData.tree) ? treeData.tree : [];
-  const files = items
-    .filter((item) => item.type === 'blob')
-    .filter((item) => folderPath ? item.path.startsWith(`${folderPath}/`) || item.path === folderPath : true);
-
-  if (countOnly) {
-    return {
-      totalFiles: files.length,
-      cappedFiles: Math.min(files.length, 100),
-      files: []
-    };
-  }
-
-  const capped = files.slice(0, 100);
-  let completed = 0;
-  const fetchJobs = capped.map((entry) => {
-    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${entry.path}`;
-    return fetch(rawUrl)
-      .then((response) => {
-        if (!response.ok) return null;
-        return response.arrayBuffer();
-      })
-      .then((buffer) => {
-        if (!buffer) return null;
-        const base64Content = arrayBufferToBase64(buffer);
-        const relativePath = folderPath && entry.path.startsWith(`${folderPath}/`)
-          ? entry.path.slice(folderPath.length + 1)
-          : entry.path;
-        return { relativePath, base64Content };
-      })
-      .finally(() => {
-        completed += 1;
-        if (tabId) {
-          chrome.tabs.sendMessage(tabId, {
-            type: 'FOLDER_ZIP_PROGRESS',
-            payload: {
-              current: completed,
-              total: capped.length,
-              text: `Fetching ${completed}/${capped.length} files...`
-            }
-          });
-        }
-      });
-  });
-
-  const settled = await Promise.allSettled(fetchJobs);
-  const results = settled
-    .filter((item) => item.status === 'fulfilled' && item.value)
-    .map((item) => item.value);
-
-  return {
-    totalFiles: files.length,
-    cappedFiles: capped.length,
-    truncated: files.length > 100,
-    files: results
-  };
-}
-
 async function getGroupedNotifications() {
   const settings = await getSettings();
   if (!settings.github_pat) {
@@ -1060,12 +897,46 @@ async function getGroupedNotifications() {
   }
 
   const headers = await buildGitHubHeaders();
-  const response = await trackedGitHubFetch('https://api.github.com/notifications?per_page=50', headers);
+  let response;
+  try {
+    response = await trackedGitHubFetch('https://api.github.com/notifications?per_page=50', headers);
+  } catch (_error) {
+    await setNotificationBadge(0);
+    return {
+      requiresToken: false,
+      groups: [],
+      unreadCount: 0,
+      fetchedAt: Date.now(),
+      unavailable: true,
+      error: 'NOTIFICATIONS_FAILED'
+    };
+  }
   if (!response.ok) {
-    throw new Error('NOTIFICATIONS_FAILED');
+    await setNotificationBadge(0);
+    return {
+      requiresToken: response.status === 401 || response.status === 403,
+      groups: [],
+      unreadCount: 0,
+      fetchedAt: Date.now(),
+      unavailable: true,
+      error: 'NOTIFICATIONS_FAILED'
+    };
   }
 
-  const items = await response.json();
+  let items;
+  try {
+    items = await response.json();
+  } catch (_error) {
+    await setNotificationBadge(0);
+    return {
+      requiresToken: false,
+      groups: [],
+      unreadCount: 0,
+      fetchedAt: Date.now(),
+      unavailable: true,
+      error: 'NOTIFICATIONS_FAILED'
+    };
+  }
   const list = Array.isArray(items) ? items : [];
   const groupsMap = {};
 
@@ -1312,7 +1183,6 @@ async function clearCachedData() {
     return key.startsWith('health_')
       || key.startsWith('deps_')
       || key.startsWith('history_')
-      || key.startsWith('tree_')
       || key.startsWith('pr_')
       || key.startsWith('star_history_')
       || key.startsWith('loc_')
@@ -1363,7 +1233,6 @@ async function getSettings() {
     showBusFactor: merged.showBusFactor !== false,
     showLicenseRisk: merged.showLicenseRisk !== false,
     showReadmeToc: merged.showReadmeToc !== false,
-    showFolderSizes: merged.showFolderSizes !== false,
     showPrComplexity: merged.showPrComplexity !== false,
     showTodoHighlights: merged.showTodoHighlights !== false,
     showContributionInsights: merged.showContributionInsights !== false,
@@ -1372,12 +1241,13 @@ async function getSettings() {
     showQuickClone: merged.showQuickClone !== false,
     showStarHistory: merged.showStarHistory !== false,
     showCommitQuality: merged.showCommitQuality !== false,
-    showFileDownloadButtons: merged.showFileDownloadButtons !== false,
-    showFolderZipDownload: merged.showFolderZipDownload !== false,
-    showOpenInIde: merged.showOpenInIde !== false,
-    showLoc: merged.showLoc !== false,
-    preferred_online_ide: normalizeOnlineIde(merged.preferred_online_ide),
-    preferred_editor: normalizeEditor(merged.preferred_editor),
+    showFileEnhancements: merged.showFileEnhancements !== false,
+    showMarkdownPrinter: merged.showMarkdownPrinter !== false,
+    showVSIcons: merged.showVSIcons !== false,
+    showWebIDE: merged.showWebIDE !== false,
+    showLOCSidebar: merged.showLOCSidebar !== false,
+    showAbsoluteDates: merged.showAbsoluteDates !== false,
+    showHealthSidebar: merged.showHealthSidebar !== false,
     github_pat: githubPat || (legacy && legacy.github_pat) || ''
   };
 }
@@ -1387,8 +1257,6 @@ async function setSettings(partial) {
   const next = Object.assign({}, current, partial || {});
   const githubPat = typeof next.github_pat === 'string' ? next.github_pat.trim() : '';
   delete next.github_pat;
-  next.preferred_editor = normalizeEditor(next.preferred_editor);
-  next.preferred_online_ide = normalizeOnlineIde(next.preferred_online_ide);
 
   await setStorageValue({
     [SETTINGS_KEY]: next,
@@ -1405,16 +1273,6 @@ async function buildGitHubHeaders() {
     headers.Authorization = `Bearer ${settings.github_pat}`;
   }
   return headers;
-}
-
-function normalizeEditor(value) {
-  const valid = new Set(['vscode', 'vscode-insiders', 'cursor', 'windsurf']);
-  return valid.has(value) ? value : 'vscode';
-}
-
-function normalizeOnlineIde(value) {
-  const valid = new Set(['github-dev', 'vscode-dev', 'codesandbox', 'stackblitz', 'gitpod', 'replit']);
-  return valid.has(value) ? value : 'github-dev';
 }
 
 function parseGitHubLink(url) {
@@ -1561,6 +1419,8 @@ function isExpectedError(error) {
     || message === 'RATE_LIMITED'
     || message === 'AUTH_ERROR'
     || message === 'INVALID_REPO'
+    || message === 'STAR_HISTORY_FAILED'
+    || message === 'NOTIFICATIONS_FAILED'
     || message.includes('Extension context invalidated')
     || message.includes('Receiving end does not exist');
 }

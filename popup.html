@@ -17,8 +17,8 @@
       <button class="tab-button is-active" data-tab="overview" type="button">Overview</button>
       <button class="tab-button" data-tab="watchlist" type="button">Watchlist</button>
       <button class="tab-button" data-tab="compare" type="button">Compare</button>
-      <button class="tab-button" data-tab="bookmarks" type="button" title="Bookmarks">Bookmarks</button>
-      <button class="tab-button" data-tab="notifications" type="button" title="Notifications">Notifications</button>
+      <button class="tab-button" data-tab="saved" type="button" title="Saved">Saved</button>
+      <button class="tab-button" data-tab="notifs" type="button" title="Notifications">Notifs</button>
       <button class="tab-button" data-tab="settings" type="button">Settings</button>
     </nav>
 
@@ -41,7 +41,7 @@
         <div id="compare-results" class="panel-stack compare-results"></div>
       </section>
 
-      <section class="tab-panel" id="tab-bookmarks">
+      <section class="tab-panel" id="tab-saved">
         <div class="bookmark-controls">
           <input id="bookmark-search" class="text-input" type="text" placeholder="Search repos or tags" spellcheck="false" autocomplete="off">
           <div id="bookmark-tags" class="bookmark-tags"></div>
@@ -49,7 +49,7 @@
         <div id="bookmarks-content" class="panel-stack"></div>
       </section>
 
-      <section class="tab-panel" id="tab-notifications">
+      <section class="tab-panel" id="tab-notifs">
         <div class="button-stack">
           <button id="notifications-refresh" class="btn" type="button">Refresh</button>
           <button id="notifications-mark-all" class="btn btn-primary" type="button">Mark all read</button>
@@ -65,7 +65,6 @@
           <label class="toggle-row"><span>Show bus factor warning</span><input id="toggle-bus-factor" type="checkbox"></label>
           <label class="toggle-row"><span>Show license risk warning</span><input id="toggle-license-risk" type="checkbox"></label>
           <label class="toggle-row"><span>Show README table of contents</span><input id="toggle-readme-toc" type="checkbox"></label>
-          <label class="toggle-row"><span>Show folder sizes in file tree</span><input id="toggle-folder-sizes" type="checkbox"></label>
           <label class="toggle-row"><span>Show PR complexity score</span><input id="toggle-pr-complexity" type="checkbox"></label>
           <label class="toggle-row"><span>Show TODO highlights in files</span><input id="toggle-todo" type="checkbox"></label>
           <label class="toggle-row"><span>Show contribution insights</span><input id="toggle-insights" type="checkbox"></label>
@@ -74,33 +73,34 @@
           <label class="toggle-row"><span>Show quick clone button</span><input id="toggle-quick-clone" type="checkbox"></label>
           <label class="toggle-row"><span>Show star history sparkline</span><input id="toggle-star-history" type="checkbox"></label>
           <label class="toggle-row"><span>Show commit quality indicators</span><input id="toggle-commit-quality" type="checkbox"></label>
-          <label class="toggle-row"><span>Show file download buttons</span><input id="toggle-file-download" type="checkbox"></label>
-          <label class="toggle-row"><span>Show folder ZIP download</span><input id="toggle-folder-zip" type="checkbox"></label>
-          <label class="toggle-row"><span>Show open in IDE button</span><input id="toggle-open-ide" type="checkbox"></label>
-          <label class="toggle-row"><span>Show lines of code</span><input id="toggle-loc" type="checkbox"></label>
+          <label class="toggle-row"><span>Show file sizes, download &amp; copy</span><input id="toggle-file-enhancements" type="checkbox"></label>
+          <label class="toggle-row"><span>Print GitHub markdown as rendered</span><input id="toggle-md-printer" type="checkbox"></label>
+          <label class="toggle-row"><span>VS Code style file icons</span><input id="toggle-vsicons" type="checkbox"></label>
+          <label class="toggle-row"><span>Open in Web IDE button</span><input id="toggle-webide" type="checkbox"></label>
+          <label class="toggle-row"><span>Lines of code in sidebar</span><input id="toggle-loc-sidebar" type="checkbox"></label>
+          <label class="toggle-row"><span>Show absolute dates</span><input id="toggle-abs-dates" type="checkbox"></label>
+          <label class="toggle-row"><span>Health score panel in sidebar</span><input id="toggle-health-sidebar" type="checkbox"></label>
         </div>
 
+        <div class="settings-section-header">Absolute Timestamps</div>
         <div class="field-block">
-          <label class="field-label" for="preferred-online-ide">Preferred online IDE</label>
-          <select id="preferred-online-ide" class="text-input">
-            <option value="github-dev">GitHub Dev</option>
-            <option value="vscode-dev">VS Code Dev</option>
-            <option value="codesandbox">CodeSandbox</option>
-            <option value="stackblitz">StackBlitz</option>
-            <option value="gitpod">Gitpod</option>
-            <option value="replit">Replit</option>
-          </select>
+          <label class="field-label">Time Format</label>
+          <div class="radio-group">
+            <label><input type="radio" name="abs-time-format" value="12h"> 12-hour (4:25 PM)</label>
+            <label><input type="radio" name="abs-time-format" value="24h" checked> 24-hour (16:25)</label>
+            <label><input type="radio" name="abs-time-format" value="auto"> Auto (locale)</label>
+          </div>
         </div>
-
         <div class="field-block">
-          <label class="field-label" for="default-editor">Default editor</label>
-          <select id="default-editor" class="text-input">
-            <option value="vscode">VS Code</option>
-            <option value="vscode-insiders">VS Code Insiders</option>
-            <option value="cursor">Cursor</option>
-            <option value="windsurf">Windsurf</option>
-          </select>
+          <label class="field-label" for="abs-date-format">Date Format</label>
+          <input id="abs-date-format" class="text-input" type="text" placeholder="YY.MM.DD">
+          <div class="field-hint">Leave empty for locale default. Use YY, MM, DD. E.g. MM/DD/YY</div>
         </div>
+        <label class="toggle-row">
+          <span>Color-code timestamps by day</span>
+          <input id="toggle-abs-color" type="checkbox" checked>
+        </label>
+        <button id="save-abs-settings" class="btn btn-sm btn-primary" type="button">Save timestamp settings</button>
 
         <div class="field-block">
           <label class="field-label" for="github-token">GitHub Personal Access Token</label>

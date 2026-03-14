@@ -11,8 +11,9 @@
 }
 
 .gh-health-page {
-  margin: 10px 0 16px 0;
+  margin: 8px 0 14px 0;
   display: block;
+  clear: both;
 }
 
 .gh-health-card {
@@ -46,18 +47,18 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 0 !important;
-  overflow: hidden !important;
-  opacity: 0 !important;
-  padding-top: 0 !important;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  padding-top: 0;
   padding-left: 2px;
   transition: max-height 300ms ease, opacity 200ms ease, padding-top 200ms ease;
 }
 
 .gh-health-badge:not(.gh-health-static):hover .gh-health-details {
-  max-height: 300px !important;
-  opacity: 1 !important;
-  padding-top: 4px !important;
+  max-height: 300px;
+  opacity: 1;
+  padding-top: 4px;
 }
 
 .gh-health-line {
@@ -113,7 +114,7 @@
 .gh-readme-toc {
   position: fixed;
   left: 16px;
-  top: 80px;
+  top: 72px;
   width: 200px;
   max-height: calc(100vh - 120px);
   overflow-y: auto;
@@ -190,25 +191,6 @@
   margin-bottom: 12px;
 }
 
-.gh-size-label {
-  margin-left: 8px;
-  color: var(--color-fg-muted, #57606a);
-  font-size: 11px;
-}
-
-.gh-size-label.is-large-red {
-  color: #da3633;
-}
-
-.gh-size-label.is-large-amber {
-  color: #d29922;
-}
-
-.gh-total-size {
-  margin: 6px 0;
-  font-size: 12px;
-  color: var(--color-fg-muted, #57606a);
-}
 
 .gh-pr-complexity {
   margin-top: 10px;
@@ -217,10 +199,10 @@
   border: 1px solid var(--color-border-default, #d0d7de);
 }
 
-.gh-pr-simple { background: #dafbe1; }
-.gh-pr-moderate { background: #ddf4ff; }
-.gh-pr-large { background: #fff8c5; }
-.gh-pr-massive { background: #ffebe9; }
+.gh-pr-simple { background: #dafbe1; color: #1a7f37; }
+.gh-pr-moderate { background: #ddf4ff; color: #0969da; }
+.gh-pr-large { background: #fff8c5; color: #9a6700; }
+.gh-pr-massive { background: #ffebe9; color: #cf222e; }
 
 .gh-pr-complexity-main {
   font-size: 13px;
@@ -391,7 +373,8 @@
   display: none;
   position: absolute;
   top: calc(100% + 6px);
-  right: 0;
+  left: 0;
+  right: auto;
   min-width: 310px;
   border: 1px solid var(--color-border-default, #d0d7de);
   border-radius: 8px;
@@ -504,115 +487,215 @@
   margin-bottom: 8px;
 }
 
-.gh-open-editor-btn {
-  margin-right: 8px;
-}
-
-.gh-file-actions-group {
-  display: inline-flex;
-  gap: 6px;
-  margin-left: 8px;
-}
-
-.gh-open-ide-wrap {
-  position: relative;
-  display: inline-flex;
-  margin-right: 8px;
-}
-
-.gh-open-ide-panel {
-  display: none;
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  min-width: 190px;
-  border: 1px solid var(--color-border-default, #d0d7de);
-  border-radius: 8px;
-  background: var(--color-canvas-default, #ffffff);
-  z-index: 450;
-}
-
-.gh-open-ide-panel.is-open {
-  display: block;
-}
-
-.gh-open-ide-item {
-  display: block;
-  width: 100%;
-  text-align: left;
-  border: 0;
-  border-bottom: 1px solid var(--color-border-default, #d0d7de);
-  background: transparent;
-  padding: 8px;
-  font-size: 12px;
-  color: var(--color-fg-default, #1f2328);
-  cursor: pointer;
-}
-
-.gh-open-ide-item:last-child {
-  border-bottom: 0;
-}
-
-.gh-loc-block {
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--color-fg-muted, #57606a);
-  cursor: pointer;
-}
-
-.gh-loc-panel {
-  display: none;
-  margin-top: 8px;
-  border: 1px solid var(--color-border-default, #d0d7de);
-  border-radius: 8px;
-  padding: 8px;
-  background: var(--color-canvas-default, #ffffff);
-}
-
-.gh-loc-panel.is-open {
-  display: block;
-}
-
-.gh-loc-row {
-  margin-bottom: 8px;
-  font-size: 12px;
-  color: var(--color-fg-default, #1f2328);
-}
-
-.gh-loc-bar {
-  margin-top: 4px;
-  height: 6px;
-  border-radius: 999px;
-  background: #d0d7de;
-  overflow: hidden;
-}
-
-.gh-loc-fill {
-  display: block;
-  height: 100%;
-}
-
-.gh-loc-toggle {
-  border: 0;
-  background: transparent;
-  color: var(--color-accent-fg, #2f81f7);
-  cursor: pointer;
-  padding: 0;
-  font-size: 12px;
-}
-
-.gh-loc-more {
-  display: none;
-}
-
-.gh-loc-more.is-open {
-  display: block;
-}
-
 @media (max-width: 1200px) {
   .gh-toc-panel {
     display: none !important;
   }
+}
+
+
+/* ── Feature 2: Open in Web IDE ── */
+.gh-webide-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.gh-webide-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  background: #f6f8fa;
+  color: #1f2328;
+  cursor: pointer;
+}
+
+.gh-webide-btn:hover {
+  background: #eaeef2;
+}
+
+.gh-webide-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 200px;
+  background: #ffffff;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(140, 149, 159, 0.2);
+  z-index: 100;
+  padding: 4px 0;
+}
+
+.gh-webide-dropdown.is-open {
+  display: block;
+}
+
+.gh-webide-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #1f2328;
+  text-decoration: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.gh-webide-item:hover {
+  background: #f6f8fa;
+}
+
+.gh-webide-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gh-webide-divider {
+  height: 1px;
+  margin: 4px 0;
+  background: #d0d7de;
+}
+
+/* ── Feature 3: LOC in sidebar ── */
+.gh-loc-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #1f2328;
+  padding: 4px 0;
+}
+
+.gh-loc-stat-number {
+  font-weight: 600;
+}
+
+.gh-loc-stat-label {
+  color: #57606a;
+}
+
+/* ── Feature 5: Health sidebar panel ── */
+.gh-health-sidebar-panel {
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: #ffffff;
+}
+
+.gh-health-sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.gh-health-sidebar-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2328;
+}
+
+.gh-health-sidebar-score {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.gh-health-sidebar-status {
+  font-size: 12px;
+  color: #57606a;
+  margin-bottom: 12px;
+}
+
+.gh-health-sidebar-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.gh-hsb-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.gh-hsb-label {
+  min-width: 90px;
+  color: #57606a;
+}
+
+.gh-hsb-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: #d8dee4;
+  overflow: hidden;
+}
+
+.gh-hsb-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+
+.gh-hsb-val {
+  min-width: 36px;
+  text-align: right;
+  font-size: 11px;
+  color: #57606a;
+}
+
+.gh-health-sidebar-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-bottom: 12px;
+}
+
+.gh-hsb-metric {
+  display: flex;
+  gap: 4px;
+  font-size: 12px;
+  color: #57606a;
+}
+
+.gh-hsb-metric-val {
+  font-weight: 600;
+  color: #1f2328;
+}
+
+.gh-health-sidebar-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.gh-health-sidebar-refresh {
+  appearance: none;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  background: #f6f8fa;
+  color: #57606a;
+  padding: 4px 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.gh-health-sidebar-refresh:hover {
+  background: #eaeef2;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -646,5 +729,68 @@
     background: rgba(218, 54, 51, 0.18);
     border-color: #da3633;
     color: #f85149;
+  }
+
+  /* Web IDE dark */
+  .gh-webide-btn {
+    background: #21262d;
+    border-color: #30363d;
+    color: #e6edf3;
+  }
+  .gh-webide-btn:hover {
+    background: #30363d;
+  }
+  .gh-webide-dropdown {
+    background: #161b22;
+    border-color: #30363d;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+  .gh-webide-item {
+    color: #e6edf3;
+  }
+  .gh-webide-item:hover {
+    background: #21262d;
+  }
+  .gh-webide-divider {
+    background: #30363d;
+  }
+
+  /* LOC sidebar dark */
+  .gh-loc-stat-row {
+    color: #e6edf3;
+  }
+  .gh-loc-stat-label {
+    color: #8b949e;
+  }
+
+  /* Health sidebar panel dark */
+  .gh-health-sidebar-panel {
+    background: #0d1117;
+    border-color: #30363d;
+  }
+  .gh-health-sidebar-title {
+    color: #e6edf3;
+  }
+  .gh-health-sidebar-status {
+    color: #8b949e;
+  }
+  .gh-hsb-label,
+  .gh-hsb-val,
+  .gh-hsb-metric {
+    color: #8b949e;
+  }
+  .gh-hsb-track {
+    background: #21262d;
+  }
+  .gh-hsb-metric-val {
+    color: #e6edf3;
+  }
+  .gh-health-sidebar-refresh {
+    background: #21262d;
+    border-color: #30363d;
+    color: #8b949e;
+  }
+  .gh-health-sidebar-refresh:hover {
+    background: #30363d;
   }
 }

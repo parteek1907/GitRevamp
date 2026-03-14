@@ -3,7 +3,9 @@
   "name": "GitHub Repository Health",
   "version": "2.0.0",
   "description": "Health scores, dependency risk, and trend history for GitHub repos.",
-  "permissions": ["storage", "activeTab", "tabs", "alarms", "contextMenus"],
+  "permissions": ["storage", "activeTab", "tabs", "alarms", "notifications"],
+  "homepage_url": "https://github.com/YOUR_USERNAME/YOUR_REPO",
+  "minimum_chrome_version": "102",
   "host_permissions": [
     "https://api.github.com/*",
     "https://github.com/*",
@@ -18,9 +20,15 @@
   "content_scripts": [
     {
       "matches": ["https://github.com/*"],
-      "js": ["jszip.min.js", "content.js"],
+      "js": ["content.js"],
       "css": ["style.css"],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["markdown-printer-style.css"],
+      "matches": ["https://*.github.com/*"]
     }
   ],
   "action": {
