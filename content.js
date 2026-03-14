@@ -547,6 +547,7 @@ const enhancedGithubApiUtil = {
       .fetch('https://api.github.com/repos/' + userRepo + contentParams, {
         headers: headers
       })
+      .then(function(resp) { console.log('[EG-SIZE] fetch response:', resp.status, 'url:', 'https://api.github.com/repos/' + userRepo + contentParams); return resp; })
       .then(enhancedGithubApiUtil.checkStatus)
       .then(enhancedGithubApiUtil.parseJSON)
       .then(function(data) {
@@ -607,9 +608,11 @@ const enhancedGithubHandlersUtil = {
     }
   },
   onPathContentFetched: function(data = []) {
+    console.log('[EG-SIZE] onPathContentFetched called, data length:', data ? data.length : 'null');
     data = enhancedGithubCommonUtil.sortFileStructureAsOnSite(data);
 
     if (!data) {
+      console.log('[EG-SIZE] data is null after sort, aborting');
       return;
     }
 
@@ -623,9 +626,11 @@ const enhancedGithubHandlersUtil = {
     }
 
     if (!isAnyFileOrDirPresent) {
+      console.log('[EG-SIZE] no files or dirs in data, aborting');
       return;
     }
 
+    console.log('[EG-SIZE] proceeding with file size injection');
     setTimeout(function() {
       enhancedGithubCommonUtil.removePrevInstancesOf('.eg-download');
 
@@ -642,23 +647,28 @@ const enhancedGithubHandlersUtil = {
       }
 
       const repoPath = enhancedGithubCommonUtil.getUsernameWithReponameFromGithubURL();
+      console.log('[EG-SIZE] repoPath:', repoPath.user + '/' + repoPath.repo, 'pathname:', window.location.pathname, 'branch:', enhancedGithubCommonUtil.getBranch());
 
       if (
         window.location.pathname !== `/${repoPath.user}/${repoPath.repo}` &&
         window.location.href.indexOf('tree/' + enhancedGithubCommonUtil.getBranch()) === -1
       ) {
+        console.log('[EG-SIZE] URL mismatch, aborting. Expected:', `/${repoPath.user}/${repoPath.repo}`);
         return;
       }
 
       const allRows = document.querySelectorAll('table > tbody > tr.react-directory-row, table > tbody > tr[class*="DirectoryContent"]');
+      console.log('[EG-SIZE] allRows found:', allRows.length);
       // Filter out the "Latest commit" header row — it has a td with colspan
       const containerItems = Array.from(allRows).filter(function(row) {
         const firstTd = row.querySelector('td');
         return !(firstTd && firstTd.hasAttribute('colspan'));
       });
       const firstCell = document.querySelectorAll('tbody tr > td:nth-child(1)')[0];
+      console.log('[EG-SIZE] containerItems after filter:', containerItems.length, 'firstCell:', !!firstCell);
 
       if (!containerItems.length || !firstCell) {
+        console.log('[EG-SIZE] no rows or no firstCell, aborting');
         return;
       }
 
@@ -893,7 +903,9 @@ const enhancedGithubDomUtil = {
     }
   },
   addFileSizeAndDownloadLink: function() {
+    console.log('[EG-SIZE] addFileSizeAndDownloadLink called');
     enhancedGithubApiUtil.getRepoContent(function(data) {
+      console.log('[EG-SIZE] getRepoContent callback, data:', data ? 'has data (' + (Array.isArray(data) ? data.length + ' items' : 'object') + ')' : 'null');
       enhancedGithubHandlersUtil.onPathContentFetched(data);
     });
   }
