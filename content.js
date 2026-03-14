@@ -27,6 +27,31 @@ let lastTrackedRepo = '';
 let enhancedGithubClickBound = false;
 let enhancedGithubLastUrl = '';
 
+function sendMessage(message) {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(message, (response) => {
+      if (chrome.runtime.lastError) {
+        const error = new Error(chrome.runtime.lastError.message || 'UNKNOWN_RUNTIME_ERROR');
+        if (isExpectedRuntimeError(error)) {
+          resolve({ success: false, error: error.message });
+          return;
+        }
+        reject(error);
+        return;
+      }
+      resolve(response);
+    });
+  });
+}
+
+function getBadgesHiddenState() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get('badgesHidden', (result) => {
+      resolve(Boolean(result && result.badgesHidden));
+    });
+  });
+}
+
 if (typeof initSidebar === 'function') {
   initSidebar();
 }
