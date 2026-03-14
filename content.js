@@ -659,10 +659,11 @@ const enhancedGithubHandlersUtil = {
 
       const allRows = document.querySelectorAll('table > tbody > tr.react-directory-row, table > tbody > tr[class*="DirectoryContent"]');
       console.log('[EG-SIZE] allRows found:', allRows.length);
-      // Filter out the "Latest commit" header row — it has a td with colspan
+      // Filter out the "Latest commit" header row and any non-file rows
       const containerItems = Array.from(allRows).filter(function(row) {
-        const firstTd = row.querySelector('td');
-        return !(firstTd && firstTd.hasAttribute('colspan'));
+        // Skip the Latest Commit header row
+        if (row.querySelector('[class*="LatestCommit"], [data-testid="latest-commit-details"]')) return false;
+        return true;
       });
       const firstCell = document.querySelectorAll('tbody tr > td:nth-child(1)')[0];
       console.log('[EG-SIZE] containerItems after filter:', containerItems.length, 'firstCell:', !!firstCell);
