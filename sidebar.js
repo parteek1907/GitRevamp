@@ -359,12 +359,18 @@
   function renderHealthScore(d, wrap) {
     if (!wrap) return;
     const score = d.score != null ? d.score : 0;
+    const grade = d.grade || '';
+    const gradeClass = grade.startsWith('A') ? 'green' : grade.startsWith('B') ? 'blue'
+      : grade.startsWith('C') ? 'yellow' : 'red';
     wrap.innerHTML = `
       <div class="ghh-score-donut" id="ghh-donut">${buildScoreRing(score)}</div>
       <div class="ghh-score-meta">
-        <span class="ghh-score-status">${d.status || 'Unknown'}</span>
+        <div class="ghh-score-grade-row">
+          <span class="ghh-score-status">${d.status || 'Unknown'}</span>
+          <span class="ghh-score-grade ghh-score-grade--${gradeClass}">${grade}</span>
+        </div>
         <span class="ghh-score-sub">${formatNumber(d.stars)} stars &middot; ${formatNumber(d.openIssues)} issues</span>
-        <span class="ghh-score-sub">${d.daysSinceLast != null ? d.daysSinceLast + 'd since push' : ''}</span>
+        <span class="ghh-score-sub">${d.daysSinceLast != null ? d.daysSinceLast + 'd since push' : ''}${d.isArchived ? ' · Archived' : ''}${d.isFork ? ' · Fork' : ''}</span>
       </div>`;
 
     const svg = wrap.querySelector('.ghh-score-donut-svg');
@@ -376,21 +382,26 @@
   function renderBreakdown(d, container) {
     if (!container) return;
     const bars = [
-      { label: 'Activity', value: d.activityScore, max: 4, color: scoreColor(d.activityScore / 4 * 10) },
-      { label: 'Maintenance', value: d.maintenanceScore, max: 3, color: scoreColor(d.maintenanceScore / 3 * 10) },
-      { label: 'Popularity', value: d.popularityScore, max: 3, color: scoreColor(d.popularityScore / 3 * 10) }
+      { label: 'Commit Activity',    value: d.pillarActivity,       max: 20, icon: '⚡' },
+      { label: 'Community',          value: d.pillarCommunity,      max: 15, icon: '👥' },
+      { label: 'Responsiveness',     value: d.pillarResponsiveness, max: 15, icon: '🔁' },
+      { label: 'Popularity',         value: d.pillarPopularity,     max: 15, icon: '⭐' },
+      { label: 'Release Health',     value: d.pillarRelease,        max: 10, icon: '🏷️' },
+      { label: 'Governance',         value: d.pillarGovernance,     max: 10, icon: '📋' },
+      { label: 'Maturity',           value: d.pillarMaturity,       max: 15, icon: '🏛️' },
     ];
 
     container.innerHTML = bars.map((b) => {
       const pct = Math.min(100, ((b.value || 0) / b.max) * 100).toFixed(0);
+      const color = scoreColor((b.value || 0) / b.max * 10);
       return `
         <div class="ghh-bar-row">
           <div class="ghh-bar-header">
-            <span class="ghh-bar-label">${b.label}</span>
+            <span class="ghh-bar-label">${b.icon} ${b.label}</span>
             <span class="ghh-bar-value">${b.value != null ? b.value : '-'} / ${b.max}</span>
           </div>
           <div class="ghh-bar-track">
-            <div class="ghh-bar-fill ghh-bar-fill--${b.color}" style="width:${pct}%"></div>
+            <div class="ghh-bar-fill ghh-bar-fill--${color}" style="width:${pct}%"></div>
           </div>
         </div>`;
     }).join('');
@@ -398,19 +409,45 @@
 
   function renderSignals(d, container) {
     if (!container) return;
+
+    function badge(val, type) {
+      const map = {
+        fast: 'green', moderate: 'blue', slow: 'yellow',
+        'low risk': 'green', 'moderate': 'yellow', 'high risk': 'red',
+        fresh: 'green', recent: 'blue', aging: 'yellow', stale: 'red',
+        permissive: 'green', copyleft: 'yellow', unknown: 'yellow', unlicensed: 'red',
+        'very active': 'green', active: 'blue', slow: 'yellow', inactive: 'red',
+      };
+      const color = map[(val || '').toLowerCase()] || 'muted';
+      return `<span class="ghh-badge ghh-badge--${color}">${val || '—'}</span>`;
+    }
+
     const rows = [
-      { label: 'Velocity', value: d.velocityLabel || 'unknown' },
-      { label: 'Bus Factor', value: d.busFactor || '-' },
-      { label: 'License', value: d.licenseName || d.licenseRisk || '-' },
-      { label: 'Latest Release', value: d.latestVersion || '-' },
-      { label: 'Avg Issue Close', value: d.avgIssueCloseDays != null ? d.avgIssueCloseDays + 'd' : '-' },
-      { label: 'Avg PR Merge', value: d.avgPRMergeDays != null ? d.avgPRMergeDays + 'd' : '-' }
+      { label: 'Contributors',   value: d.contributorCount != null ? d.contributorCount + ' devs' : '—', raw: null },
+      { label: 'Top Contributor',value: d.topContributorLogin
+          ? `${d.topContributorLogin} (${d.topContributorShare != null ? Math.round(d.topContributorShare * 100) + '%' : '?'})`
+          : '—', raw: null },
+      { label: 'Commit Consistency', value: d.commitConsistencyPct != null
+          ? `${d.commitConsistencyPct}% (${d.activeWeeksOf12 || 0}/12 wks)`
+          : '—', raw: null },
+      { label: 'Avg Commits/wk', value: d.avgCommitsPerWeek != null ? d.avgCommitsPerWeek : '—', raw: null },
+      { label: 'Velocity',       value: null, badge: badge(d.velocityLabel || 'unknown', 'velocity') },
+      { label: 'Issue Close',    value: d.avgIssueCloseDays != null ? d.avgIssueCloseDays + 'd avg' : '—', raw: null },
+      { label: 'PR Merge',       value: d.avgPRMergeDays != null ? d.avgPRMergeDays + 'd avg' : '—', raw: null },
+      { label: 'Bus Factor',     value: null, badge: badge(d.busFactor || 'unknown', 'bus') },
+      { label: 'License',        value: null, badge: badge(d.licenseName || d.licenseRisk || 'unknown', 'license') },
+      { label: 'Latest Release', value: d.latestVersion || '—', raw: null },
+      { label: 'Release Status', value: null, badge: badge(d.releaseLabel || 'unknown', 'release') },
+      { label: 'Repo Age',       value: d.repoAgeMonths != null
+          ? (d.repoAgeMonths >= 12 ? Math.floor(d.repoAgeMonths / 12) + 'y ' + (d.repoAgeMonths % 12) + 'mo' : d.repoAgeMonths + ' mo')
+          : '—', raw: null },
+      { label: 'Has Topics',     value: d.hasTopics ? 'Yes' : 'No', raw: null },
     ];
 
     container.innerHTML = rows.map((r) =>
       `<div class="ghh-signal-row">
         <span class="ghh-signal-label">${r.label}</span>
-        <span class="ghh-signal-value">${r.value}</span>
+        <span class="ghh-signal-value">${r.badge != null ? r.badge : (r.value != null ? r.value : '—')}</span>
       </div>`
     ).join('');
   }

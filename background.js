@@ -438,86 +438,197 @@ function calculateHealthScore(rawData, deps) {
   const forks = repoData.forks_count || 0;
   const stars = repoData.stargazers_count || 0;
   const watchers = repoData.subscribers_count || 0;
+  const hasDescription = Boolean(repoData.description && repoData.description.trim());
+  const hasHomepage = Boolean(repoData.homepage && repoData.homepage.trim());
+  const hasTopics = Array.isArray(repoData.topics) && repoData.topics.length > 0;
+  const isArchived = Boolean(repoData.archived);
+  const isFork = Boolean(repoData.fork);
 
-  let recency = 0;
-  if (daysSinceLast <= 7) recency = 2.0;
-  else if (daysSinceLast <= 30) recency = 1.5;
-  else if (daysSinceLast <= 90) recency = 1.0;
-  else if (daysSinceLast <= 180) recency = 0.5;
-
+  // ── Pillar 1: Commit Activity (max 20 pts) ──────────────────────────────
   const recentWeeks = Array.isArray(rawData.commitActivity) ? rawData.commitActivity.slice(-12) : [];
-  const avgCommits = recentWeeks.length
-    ? recentWeeks.reduce((sum, week) => sum + (week.total || 0), 0) / recentWeeks.length
-    : 0;
+  const allWeeks = Array.isArray(rawData.commitActivity) ? rawData.commitActivity : [];
+  const avgCommitsRecent = recentWeeks.length
+    ? recentWeeks.reduce((s, w) => s + (w.total || 0), 0) / recentWeeks.length : 0;
+  const activeWeeks = recentWeeks.filter((w) => (w.total || 0) > 0).length;
+  const consistencyRatio = recentWeeks.length > 0 ? activeWeeks / recentWeeks.length : 0;
 
-  let frequency = 0;
-  if (avgCommits >= 10) frequency = 2.0;
-  else if (avgCommits >= 5) frequency = 1.5;
-  else if (avgCommits >= 2) frequency = 1.0;
-  else if (avgCommits >= 1) frequency = 0.5;
+  // commit peak (how high the best week was)
+  const peakWeek = allWeeks.reduce((max, w) => Math.max(max, w.total || 0), 0);
 
-  const activityScore = recency + frequency;
+  let commitFreqScore = 0;
+  if (avgCommitsRecent >= 20) commitFreqScore = 8;
+  else if (avgCommitsRecent >= 10) commitFreqScore = 6;
+  else if (avgCommitsRecent >= 5) commitFreqScore = 4;
+  else if (avgCommitsRecent >= 2) commitFreqScore = 2;
+  else if (avgCommitsRecent >= 0.5) commitFreqScore = 1;
 
-  const issueRatio = forks > 0 ? openIssues / forks : openIssues;
-  let issueScore = 0;
-  if (issueRatio <= 0.05) issueScore = 1.5;
-  else if (issueRatio <= 0.15) issueScore = 1.0;
-  else if (issueRatio <= 0.35) issueScore = 0.5;
+  const commitConsistencyScore = round1(consistencyRatio * 6); // 0–6
+  const commitPeakBonus = peakWeek >= 50 ? 2 : peakWeek >= 20 ? 1 : peakWeek >= 10 ? 0.5 : 0;
 
+  const recencyBonus = daysSinceLast <= 1 ? 4 : daysSinceLast <= 7 ? 3
+    : daysSinceLast <= 14 ? 2 : daysSinceLast <= 30 ? 1.5
+    : daysSinceLast <= 60 ? 1 : daysSinceLast <= 90 ? 0.5 : 0;
+
+  const pillarActivity = Math.min(20, commitFreqScore + commitConsistencyScore + commitPeakBonus + recencyBonus);
+
+  // ── Pillar 2: Community & Collaboration (max 15 pts) ────────────────────
   let contribScore = 0;
-  if (rawData.contributorCount >= 20) contribScore = 1.5;
-  else if (rawData.contributorCount >= 5) contribScore = 1.0;
-  else if (rawData.contributorCount >= 2) contribScore = 0.5;
+  if (rawData.contributorCount >= 100) contribScore = 6;
+  else if (rawData.contributorCount >= 30) contribScore = 5;
+  else if (rawData.contributorCount >= 10) contribScore = 4;
+  else if (rawData.contributorCount >= 5) contribScore = 3;
+  else if (rawData.contributorCount >= 2) contribScore = 1.5;
 
-  const maintenanceScore = issueScore + contribScore;
+  // bus factor penalty (concentration risk)
+  let busFactorPenalty = 0;
+  if (rawData.busFactor === 'high risk') busFactorPenalty = 3;
+  else if (rawData.busFactor === 'moderate') busFactorPenalty = 1.5;
 
-  let starScore = 0;
-  if (stars >= 10000) starScore = 1.5;
-  else if (stars >= 1000) starScore = 1.0;
-  else if (stars >= 100) starScore = 0.5;
+  const topShare = rawData.topContributorShare || 0;
+  const diversityBonus = topShare < 0.3 ? 2 : topShare < 0.5 ? 1 : topShare < 0.7 ? 0.5 : 0;
 
-  let forkScore = 0;
-  if (forks >= 5000) forkScore = 0.75;
-  else if (forks >= 500) forkScore = 0.5;
-  else if (forks >= 50) forkScore = 0.25;
+  // fork engagement: forks relative to stars indicates community re-use
+  const forkEngagement = stars > 0 ? forks / stars : 0;
+  const forkEngagementScore = forkEngagement > 0.3 ? 2 : forkEngagement > 0.1 ? 1.5 : forkEngagement > 0.03 ? 1 : 0.5;
 
-  let watcherScore = 0;
-  if (watchers >= 1000) watcherScore = 0.75;
-  else if (watchers >= 100) watcherScore = 0.5;
-  else if (watchers >= 10) watcherScore = 0.25;
+  const pillarCommunity = Math.min(15, Math.max(0,
+    contribScore + diversityBonus + forkEngagementScore - busFactorPenalty
+  ));
 
-  const popularityScore = Math.min(3, starScore + forkScore + watcherScore);
+  // ── Pillar 3: Issue & PR Responsiveness (max 15 pts) ────────────────────
+  let issueCloseScore = 0;
+  const avgClose = rawData.avgIssueCloseDays;
+  if (avgClose != null) {
+    if (avgClose <= 1) issueCloseScore = 5;
+    else if (avgClose <= 3) issueCloseScore = 4;
+    else if (avgClose <= 7) issueCloseScore = 3;
+    else if (avgClose <= 14) issueCloseScore = 2;
+    else if (avgClose <= 30) issueCloseScore = 1;
+  }
 
-  let rawTotal = activityScore + maintenanceScore + popularityScore;
+  let prMergeScore = 0;
+  const avgPR = rawData.avgPRMergeDays;
+  if (avgPR != null) {
+    if (avgPR <= 1) prMergeScore = 5;
+    else if (avgPR <= 3) prMergeScore = 4;
+    else if (avgPR <= 7) prMergeScore = 3;
+    else if (avgPR <= 14) prMergeScore = 2;
+    else if (avgPR <= 30) prMergeScore = 1;
+  }
 
-  if (rawData.velocityLabel === 'fast') rawTotal += 0.5;
-  if (rawData.velocityLabel === 'slow') rawTotal -= 0.5;
-  if (rawData.busFactor === 'moderate') rawTotal -= 0.5;
-  if (rawData.busFactor === 'high risk') rawTotal -= 1.0;
-  if (rawData.releaseLabel === 'stale') rawTotal -= 0.5;
-  if (rawData.licenseRisk === 'unknown') rawTotal -= 0.5;
-  if (rawData.licenseRisk === 'unlicensed') rawTotal -= 1.5;
-  if ((rawData.ageLabel === 'mature' || rawData.ageLabel === 'veteran') && activityScore >= 2) rawTotal += 0.3;
+  // open issue backlog relative to repo engagement
+  const issueToStarRatio = stars > 0 ? openIssues / stars : openIssues / 10;
+  let backlogScore = 5;
+  if (issueToStarRatio > 0.5) backlogScore = 0;
+  else if (issueToStarRatio > 0.2) backlogScore = 1;
+  else if (issueToStarRatio > 0.1) backlogScore = 2;
+  else if (issueToStarRatio > 0.05) backlogScore = 3;
+  else if (issueToStarRatio > 0.02) backlogScore = 4;
 
-  const finalScore = Math.min(10, Math.round(rawTotal * 10) / 10);
-  const score = clamp(finalScore, 0, 10);
+  const pillarResponsiveness = Math.min(15, issueCloseScore + prMergeScore + backlogScore);
 
-  const status = daysSinceLast <= 30
-    ? 'Active'
-    : daysSinceLast <= 90
-      ? 'Moderate'
-      : daysSinceLast <= 180
-        ? 'Slow'
-        : 'Inactive';
+  // ── Pillar 4: Popularity & Reach (max 15 pts) ───────────────────────────
+  // log-scaled star score to prevent huge repos dominating
+  const starScore = Math.min(7, stars > 0 ? Math.log10(stars) * 2.33 : 0);
+  const watcherScore = Math.min(4, watchers > 0 ? Math.log10(watchers + 1) * 1.6 : 0);
+  const forkScore = Math.min(4, forks > 0 ? Math.log10(forks + 1) * 1.6 : 0);
+
+  const pillarPopularity = Math.min(15, round1(starScore + watcherScore + forkScore));
+
+  // ── Pillar 5: Release & Versioning Health (max 10 pts) ──────────────────
+  let releaseScore = 0;
+  if (rawData.releaseLabel === 'fresh') releaseScore = 10;
+  else if (rawData.releaseLabel === 'recent') releaseScore = 7;
+  else if (rawData.releaseLabel === 'aging') releaseScore = 4;
+  else if (rawData.releaseLabel === 'stale') releaseScore = 1;
+  else releaseScore = 3; // no releases — penalise but not harshly (many active repos skip formal releases)
+
+  const pillarRelease = releaseScore;
+
+  // ── Pillar 6: Governance & Documentation (max 10 pts) ───────────────────
+  const descScore = hasDescription ? 2 : 0;
+  const homepageScore = hasHomepage ? 1.5 : 0;
+  const topicsScore = hasTopics ? 1.5 : 0;
+
+  let licenseScore = 0;
+  if (rawData.licenseRisk === 'permissive') licenseScore = 4;
+  else if (rawData.licenseRisk === 'copyleft') licenseScore = 3;
+  else if (rawData.licenseRisk === 'unknown') licenseScore = 1;
+  else if (rawData.licenseRisk === 'unlicensed') licenseScore = 0;
+  else licenseScore = 2;
+
+  const pillarGovernance = Math.min(10, descScore + homepageScore + topicsScore + licenseScore);
+
+  // ── Pillar 7: Maturity & Longevity (max 15 pts) ─────────────────────────
+  const ageMonths = rawData.repoAgeMonths || 0;
+  let ageScore = 0;
+  if (ageMonths >= 60) ageScore = 6;      // 5+ years
+  else if (ageMonths >= 36) ageScore = 5; // 3+ years
+  else if (ageMonths >= 24) ageScore = 4; // 2+ years
+  else if (ageMonths >= 12) ageScore = 3; // 1+ year
+  else if (ageMonths >= 6) ageScore = 2;
+  else if (ageMonths >= 3) ageScore = 1;
+
+  // velocity bonus: proven track record + still moving fast
+  const velocityBonus = rawData.velocityLabel === 'fast' ? 3
+    : rawData.velocityLabel === 'moderate' ? 2
+    : rawData.velocityLabel === 'slow' ? 1 : 0;
+
+  // repo size as a proxy for depth of content (in KB, capped)
+  const sizeKB = Number(repoData.size) || 0;
+  const sizeScore = sizeKB > 50000 ? 3 : sizeKB > 10000 ? 2 : sizeKB > 1000 ? 1.5 : sizeKB > 100 ? 1 : 0.5;
+
+  // archived & fork penalties
+  const archivedPenalty = isArchived ? 6 : 0;
+  const forkMalus = isFork ? 2 : 0;
+
+  const pillarMaturity = Math.min(15, Math.max(0,
+    ageScore + velocityBonus + sizeScore - archivedPenalty - forkMalus
+  ));
+
+  // ── Weighted Total (out of 100, scaled to 10) ────────────────────────────
+  // Weights: Activity 20, Community 15, Responsiveness 15, Popularity 15,
+  //          Release 10, Governance 10, Maturity 15  → total max 100
+  const rawTotal = pillarActivity + pillarCommunity + pillarResponsiveness
+    + pillarPopularity + pillarRelease + pillarGovernance + pillarMaturity;
+
+  const score = clamp(Math.round((rawTotal / 100) * 100) / 10, 0, 10);
+
+  // ── Grade ────────────────────────────────────────────────────────────────
+  const grade = score >= 9 ? 'A+' : score >= 8 ? 'A' : score >= 7 ? 'B+'
+    : score >= 6 ? 'B' : score >= 5 ? 'C+' : score >= 4 ? 'C'
+    : score >= 3 ? 'D' : 'F';
+
+  // ── Status label ─────────────────────────────────────────────────────────
+  const status = isArchived ? 'Archived'
+    : daysSinceLast <= 7 ? 'Very Active'
+    : daysSinceLast <= 30 ? 'Active'
+    : daysSinceLast <= 90 ? 'Moderate'
+    : daysSinceLast <= 180 ? 'Slow'
+    : 'Inactive';
 
   return {
     score,
+    grade,
     status,
     repoName: repoData.full_name,
     size: Number(repoData.size) || 0,
-    activityScore: round1(activityScore),
-    maintenanceScore: round1(maintenanceScore),
-    popularityScore: round1(popularityScore),
+    isArchived,
+    isFork,
+    hasDescription,
+    hasTopics,
+    // pillar scores (used by sidebar breakdown bars)
+    pillarActivity:        round1(pillarActivity),
+    pillarCommunity:       round1(pillarCommunity),
+    pillarResponsiveness:  round1(pillarResponsiveness),
+    pillarPopularity:      round1(pillarPopularity),
+    pillarRelease:         round1(pillarRelease),
+    pillarGovernance:      round1(pillarGovernance),
+    pillarMaturity:        round1(pillarMaturity),
+    // sub-metrics exposed for signals section
+    avgCommitsPerWeek:     round1(avgCommitsRecent),
+    commitConsistencyPct:  Math.round(consistencyRatio * 100),
+    activeWeeksOf12:       activeWeeks,
     daysSinceLast,
     openIssues,
     stars,
@@ -527,6 +638,7 @@ function calculateHealthScore(rawData, deps) {
     busFactor: rawData.busFactor,
     topContributorShare: rawData.topContributorShare,
     topContributorLogin: rawData.topContributorLogin,
+    contributorCount: rawData.contributorCount,
     avgIssueCloseDays: rawData.avgIssueCloseDays,
     avgPRMergeDays: rawData.avgPRMergeDays,
     velocityLabel: rawData.velocityLabel,
@@ -538,6 +650,10 @@ function calculateHealthScore(rawData, deps) {
     releaseLabel: rawData.releaseLabel,
     repoAgeMonths: rawData.repoAgeMonths,
     ageLabel: rawData.ageLabel,
+    // legacy aliases kept so watchlist / history code don't break
+    activityScore:     round1(pillarActivity / 2),
+    maintenanceScore:  round1(pillarCommunity / 1.5),
+    popularityScore:   round1(pillarPopularity / 1.5),
     scannedAt: Date.now()
   };
 }

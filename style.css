@@ -1217,16 +1217,49 @@ local-time[data-abs-hidden] {
   gap: 2px;
 }
 
+.ghh-score-grade-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .ghh-score-status {
   font-size: 13px;
   font-weight: 600;
   color: var(--ghh-text-primary);
 }
 
+.ghh-score-grade {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+.ghh-score-grade--green  { background: rgba(35,134,54,0.25); color: #3fb950; }
+.ghh-score-grade--blue   { background: rgba(56,139,253,0.2); color: #58a6ff; }
+.ghh-score-grade--yellow { background: rgba(210,153,34,0.2); color: #d29922; }
+.ghh-score-grade--red    { background: rgba(248,81,73,0.2);  color: #f85149; }
+
 .ghh-score-sub {
   font-size: 11px;
   color: var(--ghh-text-secondary);
 }
+
+/* ── Signal Badges ── */
+.ghh-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+.ghh-badge--green  { background: rgba(35,134,54,0.25);  color: #3fb950; }
+.ghh-badge--blue   { background: rgba(56,139,253,0.2);  color: #58a6ff; }
+.ghh-badge--yellow { background: rgba(210,153,34,0.2);  color: #d29922; }
+.ghh-badge--red    { background: rgba(248,81,73,0.2);   color: #f85149; }
+.ghh-badge--muted  { background: rgba(139,148,158,0.15); color: var(--ghh-text-secondary); }
 
 /* ── Breakdown Bars ── */
 .ghh-breakdown {
