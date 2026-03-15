@@ -34,13 +34,13 @@
       "matches": ["https://github.com/*"]
     },
     {
-      "resources": ["onboarding.html", "onboarding.css", "onboarding.js"],
+      "resources": ["onboarding.html", "onboarding.css", "onboarding.js", "onboarding.bundle.css", "onboarding.bundle.js"],
       "matches": ["<all_urls>"]
     }
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "GitHub Repository Health",
+    "default_title": "GitRevamp",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
