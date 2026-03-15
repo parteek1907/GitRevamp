@@ -2630,6 +2630,16 @@ async function injectHealthSidebarPanel(owner, repo) {
 function cleanupAllBadges() {
   document.querySelectorAll('.gh-health-badge').forEach((badge) => badge.remove());
   document.querySelectorAll('.eg-download, .eg-repo-size, .js-file-clipboard, .js-file-download, .js-enhanced-github-copy-btn, .gh-md-print-btn, .gh-webide-wrap, .gh-loc-stat-row, .gh-loc-modal-backdrop, .gh-health-sidebar-panel, .gh-abs-date-span').forEach((node) => node.remove());
+
+  // Remove injected VS Code icons and restore the original SVG icons
+  document.querySelectorAll('img[data-vsicon]').forEach((img) => {
+    const prev = img.previousElementSibling;
+    if (prev && prev.tagName.toLowerCase() === 'svg' && prev.style.display === 'none') {
+      prev.style.display = '';
+    }
+    img.remove();
+  });
+
   document.querySelectorAll('[data-health-done], [data-md-print-done], [data-readme-print-done], [data-vsicons-done], [data-vsicon-row], [data-vsicon], [data-webide-done], [data-loc-sidebar-done], [data-health-panel-done], [data-abs-converted], [data-abs-hidden]').forEach((element) => {
     element.removeAttribute('data-health-done');
     element.removeAttribute('data-md-print-done');
