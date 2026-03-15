@@ -108,12 +108,27 @@ async function bootstrap() {
 
 function startObserver() {
   if (observer) return;
+  let iconDebounce = null;
   observer = new MutationObserver(() => {
     const currentUrl = location.href;
     if (currentUrl !== lastUrl) {
       lastUrl = currentUrl;
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => scanPage(), 300);
+      return;
+    }
+    // Re-run icon injection when the file tree renders after initial scan
+    if (settings.showVSIcons) {
+      const tree = document.querySelector(
+        'table[aria-labelledby="folders-and-files"], [role="grid"]'
+      );
+      if (tree && !tree.hasAttribute('data-vsicons-done')) {
+        clearTimeout(iconDebounce);
+        iconDebounce = setTimeout(() => {
+          const parsed = parseCurrentRepo();
+          if (parsed) injectVSCodeFileIcons(parsed.owner, parsed.repo).catch(() => {});
+        }, 200);
+      }
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
@@ -1759,6 +1774,7 @@ async function injectVSCodeFileIcons(owner, repo) {
     'table[aria-labelledby="folders-and-files"], [role="grid"]'
   );
   if (!tree) return;
+  tree.setAttribute('data-vsicons-done', 'true');
 
   const rows = Array.from(
     tree.querySelectorAll('tr, div[role="row"], [class*="TreeRow"], [class*="row"]')
