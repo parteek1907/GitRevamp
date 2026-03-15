@@ -199,5 +199,5 @@ function isExpectedRuntimeError(error) {
 function logError(error) {
   const message = error instanceof Error ? error.message : String(error || '');
   if (isExpectedRuntimeError(error)) return;
-  console.error('[GH Health]', message);
+  console.error('[GitRevamp]', message);
 }
