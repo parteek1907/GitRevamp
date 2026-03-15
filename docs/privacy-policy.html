@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — GitRevamp</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem;
+      line-height: 1.7;
+    }
+    h1 { font-size: 1.8rem; margin-bottom: 0.25rem; color: #fff; }
+    h2 { font-size: 1.1rem; margin-top: 2rem; margin-bottom: 0.5rem; color: #fff; }
+    p, li { color: #8b949e; font-size: 0.95rem; }
+    ul { padding-left: 1.25rem; }
+    li { margin-bottom: 0.4rem; }
+    .updated { font-size: 0.85rem; color: #8b949e; margin-bottom: 2.5rem; }
+    a { color: #388bfd; }
+    hr { border: none; border-top: 1px solid #30363d; margin: 2rem 0; }
+  </style>
+</head>
+<body>
+
+  <h1>Privacy Policy</h1>
+  <p class="updated">GitRevamp Chrome Extension — Last updated: 15 March 2026</p>
+
+  <h2>Overview</h2>
+  <p>GitRevamp does not collect, store, transmit, or sell any personal data. This policy explains exactly what the extension does and does not do with your data.</p>
+
+  <h2>Data We Do NOT Collect</h2>
+  <p>GitRevamp does not collect any of the following:</p>
+  <ul>
+    <li>Personal identifiable information (name, email, address)</li>
+    <li>Browsing history or web activity</li>
+    <li>GitHub account details or credentials</li>
+    <li>Clicks, keystrokes, or user behaviour</li>
+    <li>Any data from pages you visit</li>
+  </ul>
+
+  <h2>Local Storage</h2>
+  <p>GitRevamp stores the following data locally on your device using <code>chrome.storage.local</code>. This data never leaves your browser:</p>
+  <ul>
+    <li>Your feature toggle preferences (which features are on or off)</li>
+    <li>Your GitHub Personal Access Token, if you choose to provide one</li>
+    <li>Cached API responses to reduce repeated network requests</li>
+    <li>Any repositories you add to your bookmarks or watchlist</li>
+  </ul>
+
+  <h2>External API Calls</h2>
+  <p>GitRevamp makes read-only requests to the following public APIs. No personal data is included in these requests — only the public repository owner and name:</p>
+  <ul>
+    <li><strong>api.github.com</strong> — Fetches public repository metadata, contributor stats, and commit activity to calculate health scores</li>
+    <li><strong>api.codetabs.com</strong> — Fetches lines-of-code statistics for the current repository</li>
+    <li><strong>api.osv.dev</strong> — Checks for known CVEs in repository dependencies</li>
+    <li><strong>raw.githubusercontent.com</strong> — Reads public package.json files for dependency analysis</li>
+    <li><strong>registry.npmjs.org</strong> — Checks npm package metadata for staleness</li>
+  </ul>
+
+  <h2>GitHub Personal Access Token</h2>
+  <p>If you choose to add a GitHub Personal Access Token (PAT) to increase your API rate limit, that token is stored only in <code>chrome.storage.local</code> on your own device. It is used solely to authenticate requests to <code>api.github.com</code> and is never transmitted to any other server or third party.</p>
+
+  <h2>Notifications</h2>
+  <p>GitRevamp may display browser notifications to alert you when a repository on your watchlist has a significant health score drop. These notifications are generated locally and do not involve any external server.</p>
+
+  <h2>Third Parties</h2>
+  <p>GitRevamp does not share, sell, or transfer any data to third parties. The extension has no analytics, no advertising, and no tracking of any kind.</p>
+
+  <h2>Children's Privacy</h2>
+  <p>GitRevamp does not knowingly collect any data from anyone, including children under the age of 13.</p>
+
+  <h2>Changes to This Policy</h2>
+  <p>If this policy changes, the updated version will be posted at this URL with a new date.</p>
+
+  <h2>Contact</h2>
+  <p>If you have any questions about this privacy policy, open an issue on the GitHub repository: <a href="https://github.com/parteek1907/GitRevamp/issues">github.com/parteek1907/GitRevamp/issues</a></p>
+
+  <hr>
+  <p style="font-size:0.8rem; color:#484f58;">GitRevamp is an independent open-source project. It is not affiliated with GitHub or Microsoft.</p>
+
+</body>
+</html>
