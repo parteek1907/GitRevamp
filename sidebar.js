@@ -1,7 +1,7 @@
 /* ════════════════════════════════════════════════════════════════════════════
-   GitHub Health — Collapsible Left Sidebar
-   Plain content script, no modules. Loaded after content.js.
-   ════════════════════════════════════════════════════════════════════════════ */
+  GitRevamp — Collapsible Left Sidebar
+  Plain content script, no modules. Loaded after content.js.
+  ════════════════════════════════════════════════════════════════════════════ */
 
 (function () {
   'use strict';
@@ -14,6 +14,7 @@
   let sidebarEl = null;
   let panelScrollEl = null;
   let isExpanded = false;
+  let sidebarEnabled = true;
 
   function detectSidebarTop() {
     const selectors = [
@@ -67,6 +68,21 @@
     if (BUILTIN.includes(owner.toLowerCase())) return null;
     if (repo.startsWith('.')) return null;
     return { owner, repo };
+  }
+
+  async function getSidebarEnabledSetting() {
+    try {
+      const resp = await sidebarSendMessage({ type: 'GET_SETTINGS' });
+      const cfg = resp && resp.settings ? resp.settings : {};
+      return cfg.showHealthSidebar !== false;
+    } catch (_err) {
+      return true;
+    }
+  }
+
+  function applySidebarVisibility() {
+    if (!sidebarEl) return;
+    sidebarEl.style.display = sidebarEnabled ? '' : 'none';
   }
 
   function formatNumber(n) {
@@ -238,12 +254,6 @@
           <div class="ghh-actions-section">
             <div class="ghh-actions-divider"></div>
             <div class="ghh-actions-row">
-              <button class="ghh-action-btn" data-tooltip="Compare" data-action="compare" title="Compare repos">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M9.573.677L7.177 3.073a.25.25 0 0 0 .177.427h1.146v3a.75.75 0 0 0 1.5 0v-3h1.146a.25.25 0 0 0 .177-.427L8.927.677a.25.25 0 0 0-.354 0ZM3.75 7.5a.75.75 0 0 1 .75.75v3h1.146a.25.25 0 0 1 .177.427l-2.396 2.396a.25.25 0 0 1-.354 0L.677 11.677A.25.25 0 0 1 .854 11.25H2V8.25a.75.75 0 0 1 .75-.75Zm8.75.75v3h1.146a.25.25 0 0 1 .177.427l-2.396 2.396a.25.25 0 0 1-.354 0l-2.396-2.396a.25.25 0 0 1 .177-.427H10v-3a.75.75 0 0 1 1.5 0Z"/></svg>
-              </button>
-              <button class="ghh-action-btn" data-tooltip="Settings" data-action="settings" title="Open settings">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8.2 8.2 0 0 1 .701.031C10.104.163 11.38.76 12.5 1.636l-.86.86A6.5 6.5 0 0 0 8 1.5 6.5 6.5 0 1 0 14.5 8c0-.69-.108-1.357-.308-1.981l.86-.86c.58.915 1.012 1.96 1.18 3.136A8.195 8.195 0 0 1 16 8a8 8 0 1 1-8-8Zm4.78 2.28a.75.75 0 0 0-1.06 1.06L13.94 5.56a.75.75 0 0 0 1.06-1.06l-2.22-2.22Z"/></svg>
-              </button>
               <button class="ghh-action-btn" data-tooltip="Refresh" data-action="refresh" title="Refresh data">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1.705 8.005a.75.75 0 0 1 .834.656 5.5 5.5 0 0 0 9.592 2.97l-1.204-1.204a.25.25 0 0 1 .177-.427h3.646a.25.25 0 0 1 .25.25v3.646a.25.25 0 0 1-.427.177l-1.07-1.07A7 7 0 0 1 1.049 8.84a.75.75 0 0 1 .656-.834ZM14.295 7.995a.75.75 0 0 1-.834-.656 5.5 5.5 0 0 0-9.592-2.97l1.204 1.204a.25.25 0 0 1-.177.427H1.25a.25.25 0 0 1-.25-.25V2.104a.25.25 0 0 1 .427-.177l1.07 1.07a7 7 0 0 1 12.553 4.341.75.75 0 0 1-.656.834v-.177Z"/></svg>
               </button>
@@ -302,6 +312,8 @@
   /* ── Data Loading ── */
 
   async function refreshSidebarData() {
+    if (!sidebarEnabled || !sidebarEl) return;
+
     const parsed = parseRepoFromPath(location.pathname);
     const isRepo = Boolean(parsed);
 
@@ -369,7 +381,7 @@
           <span class="ghh-score-status">${d.status || 'Unknown'}</span>
           <span class="ghh-score-grade ghh-score-grade--${gradeClass}">${grade}</span>
         </div>
-        <span class="ghh-score-sub">${formatNumber(d.stars)} stars &middot; ${formatNumber(d.openIssues)} issues</span>
+        <span class="ghh-score-sub">${formatNumber(d.stars)} stars &middot; ${formatNumber(d.openIssues)} issues${d.primaryLanguage ? ' &middot; ' + d.primaryLanguage : ''}</span>
         <span class="ghh-score-sub">${d.daysSinceLast != null ? d.daysSinceLast + 'd since push' : ''}${d.isArchived ? ' · Archived' : ''}${d.isFork ? ' · Fork' : ''}</span>
       </div>`;
 
@@ -423,9 +435,8 @@
     }
 
     const rows = [
-      { label: 'Contributors',   value: d.contributorCount != null ? d.contributorCount + ' devs' : '—', raw: null },
       { label: 'Top Contributor',value: d.topContributorLogin
-          ? `${d.topContributorLogin} (${d.topContributorShare != null ? Math.round(d.topContributorShare * 100) + '%' : '?'})`
+          ? `${d.topContributorLogin} (${d.topContributorShare != null ? Math.round(d.topContributorShare) + '%' : '?'})`
           : '—', raw: null },
       { label: 'Commit Consistency', value: d.commitConsistencyPct != null
           ? `${d.commitConsistencyPct}% (${d.activeWeeksOf12 || 0}/12 wks)`
@@ -538,92 +549,6 @@
     }
   }
 
-  /* ── Compare Overlay ── */
-
-  function openCompareOverlay() {
-    if (document.getElementById('ghh-compare-overlay')) return;
-
-    const overlay = document.createElement('div');
-    overlay.id = 'ghh-compare-overlay';
-    Object.assign(overlay.style, {
-      position: 'fixed', inset: '0', zIndex: '10001',
-      background: 'rgba(0,0,0,0.5)', display: 'flex',
-      alignItems: 'center', justifyContent: 'center'
-    });
-
-    const card = document.createElement('div');
-    Object.assign(card.style, {
-      background: 'var(--ghh-sidebar-bg, #0d1117)',
-      border: '1px solid var(--ghh-sidebar-border, rgba(255,255,255,0.08))',
-      borderRadius: '12px', padding: '20px', width: '360px',
-      maxWidth: '90vw', color: 'var(--ghh-text-primary, #e6edf3)',
-      fontFamily: 'var(--ghh-font)'
-    });
-
-    card.innerHTML = `
-      <div style="font-size:14px;font-weight:700;margin-bottom:12px">Compare Repos</div>
-      <input id="ghh-cmp-a" placeholder="owner/repo A" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.04);color:#e6edf3;margin-bottom:8px;font-size:13px;box-sizing:border-box" />
-      <input id="ghh-cmp-b" placeholder="owner/repo B" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.04);color:#e6edf3;margin-bottom:12px;font-size:13px;box-sizing:border-box" />
-      <button id="ghh-cmp-go" style="width:100%;padding:6px;border-radius:6px;border:none;background:#238636;color:#fff;font-size:13px;font-weight:600;cursor:pointer">Compare</button>
-      <div id="ghh-cmp-result" style="margin-top:12px;font-size:12px"></div>`;
-
-    overlay.appendChild(card);
-    document.body.appendChild(overlay);
-
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) overlay.remove();
-    });
-
-    card.querySelector('#ghh-cmp-go').addEventListener('click', async () => {
-      const inputA = card.querySelector('#ghh-cmp-a');
-      const inputB = card.querySelector('#ghh-cmp-b');
-      const resultDiv = card.querySelector('#ghh-cmp-result');
-      const a = (inputA.value || '').trim().split('/');
-      const b = (inputB.value || '').trim().split('/');
-      if (a.length < 2 || b.length < 2) {
-        resultDiv.textContent = 'Enter owner/repo for both fields.';
-        return;
-      }
-      resultDiv.innerHTML = '<div class="ghh-loading-text">Loading...</div>';
-
-      const [rA, rB] = await Promise.all([
-        sidebarSendMessage({ type: 'GET_REPO_HEALTH', payload: { owner: a[0], repo: a[1], recordRecent: false } }),
-        sidebarSendMessage({ type: 'GET_REPO_HEALTH', payload: { owner: b[0], repo: b[1], recordRecent: false } })
-      ]);
-
-      const dA = rA && rA.data;
-      const dB = rB && rB.data;
-      if (!dA || !dB) {
-        resultDiv.textContent = 'Could not load one or both repos.';
-        return;
-      }
-
-      const fields = [
-        { label: 'Score', key: 'score' },
-        { label: 'Activity', key: 'activityScore' },
-        { label: 'Maintenance', key: 'maintenanceScore' },
-        { label: 'Popularity', key: 'popularityScore' },
-        { label: 'Stars', key: 'stars' },
-        { label: 'Open Issues', key: 'openIssues' }
-      ];
-
-      const tableRows = fields.map((f) =>
-        `<tr><td style="padding:2px 8px;color:var(--ghh-text-secondary)">${f.label}</td>` +
-        `<td style="padding:2px 8px;text-align:right">${dA[f.key] != null ? dA[f.key] : '-'}</td>` +
-        `<td style="padding:2px 8px;text-align:right">${dB[f.key] != null ? dB[f.key] : '-'}</td></tr>`
-      ).join('');
-
-      resultDiv.innerHTML = `<table style="width:100%;border-collapse:collapse">
-        <thead><tr>
-          <th style="text-align:left;padding:2px 8px;border-bottom:1px solid rgba(255,255,255,0.1)"></th>
-          <th style="text-align:right;padding:2px 8px;border-bottom:1px solid rgba(255,255,255,0.1)">${a.join('/')}</th>
-          <th style="text-align:right;padding:2px 8px;border-bottom:1px solid rgba(255,255,255,0.1)">${b.join('/')}</th>
-        </tr></thead>
-        <tbody>${tableRows}</tbody>
-      </table>`;
-    });
-  }
-
   /* ── Event Delegation ── */
 
   function handleSidebarClick(e) {
@@ -646,12 +571,6 @@
       case 'open-notifications':
         toggleSidebar(true);
         break;
-      case 'compare':
-        openCompareOverlay();
-        break;
-      case 'settings':
-        chrome.runtime.sendMessage({ type: 'OPEN_POPUP' });
-        break;
       case 'refresh':
         refreshSidebarData();
         break;
@@ -664,6 +583,7 @@
     setInterval(() => {
       if (location.pathname !== currentPath) {
         currentPath = location.pathname;
+        if (!sidebarEnabled) return;
         applySidebarTop();
         attachToggleListener();
         if (isExpanded) {
@@ -708,9 +628,35 @@
     startUrlWatcher();
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initSidebar);
-  } else {
+  function attachSettingsWatcher() {
+    chrome.storage.onChanged.addListener(async (changes, areaName) => {
+      if (areaName !== 'local' || !changes.settings) return;
+
+      const nextSettings = changes.settings.newValue || {};
+      const nextEnabled = nextSettings.showHealthSidebar !== false;
+      const changed = nextEnabled !== sidebarEnabled;
+      sidebarEnabled = nextEnabled;
+      applySidebarVisibility();
+
+      if (changed && sidebarEnabled) {
+        applySidebarTop();
+        if (isExpanded) {
+          refreshSidebarData();
+        }
+      }
+    });
+  }
+
+  async function bootstrapSidebar() {
+    sidebarEnabled = await getSidebarEnabledSetting();
     initSidebar();
+    applySidebarVisibility();
+    attachSettingsWatcher();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootstrapSidebar);
+  } else {
+    bootstrapSidebar();
   }
 })();
