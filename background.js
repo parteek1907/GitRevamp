@@ -14,7 +14,6 @@ const WATCHLIST_KEY = 'watchlist';
 const WATCHLIST_SCORES_KEY = 'watchlist_scores';
 const RECENT_SCANS_KEY = 'recent_scans';
 const RECENT_REPOS_KEY = 'recent_repos';
-const BOOKMARKS_KEY = 'bookmarks';
 const BADGES_HIDDEN_KEY = 'badges_hidden';
 
 const DEFAULT_SETTINGS = {
@@ -167,17 +166,6 @@ async function routeMessage(message, sender) {
       const data = await markRepoNotificationsRead(payload.owner, payload.repo);
       return { data };
     }
-    case 'GET_BOOKMARKS': {
-      return { bookmarks: await getBookmarks() };
-    }
-    case 'SET_BOOKMARK': {
-      const payload = message.payload || {};
-      return { bookmarks: await setBookmark(payload) };
-    }
-    case 'REMOVE_BOOKMARK': {
-      const payload = message.payload || {};
-      return { bookmarks: await removeBookmark(payload.owner, payload.repo) };
-    }
     case 'GET_RECENT_REPOS': {
       return { recentRepos: await getRecentRepos() };
     }
@@ -230,11 +218,13 @@ async function fetchRepoData(owner, repo) {
 
   const requests = await Promise.allSettled([
     trackedGitHubFetch(base, headers),
-    trackedGitHubFetch(`${base}/stats/commit_activity`, headers),
+    fetchCommitActivityWithRetry(base, headers),
     trackedGitHubFetch(`${base}/contributors?per_page=100`, headers),
     trackedGitHubFetch(`${base}/issues?state=closed&per_page=10&sort=updated`, headers),
     trackedGitHubFetch(`${base}/pulls?state=closed&per_page=10&sort=updated`, headers),
-    trackedGitHubFetch(`${base}/releases?per_page=1`, headers)
+    trackedGitHubFetch(`${base}/releases?per_page=1`, headers),
+    trackedGitHubFetch(`${base}/pulls?state=open&per_page=1`, headers),
+    trackedGitHubFetch(`${base}/contributors?per_page=1`, headers)
   ]);
 
   const repoResponse = resolvePrimaryResponse(requests[0]);
@@ -245,6 +235,13 @@ async function fetchRepoData(owner, repo) {
   const closedIssues = await parseArrayResponse(requests[3]);
   const closedPulls = await parseArrayResponse(requests[4]);
   const releases = await parseArrayResponse(requests[5]);
+  const openPRCount = await parseItemCount(requests[6]);
+  // per_page=1 request: last page number from Link header == exact total contributor count
+  const totalContributorCount = await parseItemCount(requests[7]);
+
+  // open_issues_count from GitHub API includes PRs; subtract open PRs for true issue count
+  const rawOpenIssues = repoData.open_issues_count || 0;
+  const trueOpenIssues = Math.max(0, rawOpenIssues - openPRCount);
 
   const realIssues = closedIssues.filter((item) => !item.pull_request);
   const contributorStats = analyzeContributors(contributors);
@@ -254,8 +251,9 @@ async function fetchRepoData(owner, repo) {
 
   return {
     repoData,
+    trueOpenIssues,
     commitActivity,
-    contributorCount: contributors.length || 1,
+    contributorCount: totalContributorCount || contributors.length || 1,
     busFactor: contributorStats.busFactor,
     topContributorShare: contributorStats.topContributorShare,
     topContributorLogin: contributorStats.topContributorLogin,
@@ -269,7 +267,8 @@ async function fetchRepoData(owner, repo) {
     licenseName: licenseStats.licenseName,
     licenseRisk: licenseStats.licenseRisk,
     repoAgeMonths: getRepoAgeMonths(repoData.created_at),
-    ageLabel: getAgeLabel(repoData.created_at)
+    ageLabel: getAgeLabel(repoData.created_at),
+    primaryLanguage: repoData.language || null
   };
 }
 
@@ -305,6 +304,37 @@ async function parseArrayResponse(settlement) {
   } catch (_error) {
     return [];
   }
+}
+
+async function parseItemCount(settlement) {
+  if (settlement.status !== 'fulfilled') return 0;
+  const response = settlement.value;
+  if (!response.ok) return 0;
+  const link = response.headers.get('Link') || '';
+  try {
+    const data = await response.json();
+    if (!Array.isArray(data)) return 0;
+    if (data.length === 0) return 0;
+    if (link.includes('rel="last"')) return parseLastPage(link);
+    return data.length;
+  } catch (_error) {
+    return 0;
+  }
+}
+
+async function fetchCommitActivityWithRetry(base, headers) {
+  const url = `${base}/stats/commit_activity`;
+  const maxRetries = 3;
+  for (let i = 0; i < maxRetries; i++) {
+    const response = await trackedGitHubFetch(url, headers);
+    if (response.status === 202) {
+      await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+      continue;
+    }
+    return response;
+  }
+  // final attempt
+  return trackedGitHubFetch(url, headers);
 }
 
 function analyzeContributors(contributors) {
@@ -434,7 +464,7 @@ function analyzeLicense(license) {
 function calculateHealthScore(rawData, deps) {
   const repoData = rawData.repoData;
   const daysSinceLast = getDaysSince(repoData.pushed_at);
-  const openIssues = repoData.open_issues_count || 0;
+  const openIssues = rawData.trueOpenIssues != null ? rawData.trueOpenIssues : (repoData.open_issues_count || 0);
   const forks = repoData.forks_count || 0;
   const stars = repoData.stargazers_count || 0;
   const watchers = repoData.subscribers_count || 0;
@@ -485,7 +515,7 @@ function calculateHealthScore(rawData, deps) {
   else if (rawData.busFactor === 'moderate') busFactorPenalty = 1.5;
 
   const topShare = rawData.topContributorShare || 0;
-  const diversityBonus = topShare < 0.3 ? 2 : topShare < 0.5 ? 1 : topShare < 0.7 ? 0.5 : 0;
+  const diversityBonus = topShare < 30 ? 2 : topShare < 50 ? 1 : topShare < 70 ? 0.5 : 0;
 
   // fork engagement: forks relative to stars indicates community re-use
   const forkEngagement = stars > 0 ? forks / stars : 0;
@@ -551,7 +581,7 @@ function calculateHealthScore(rawData, deps) {
   const topicsScore = hasTopics ? 1.5 : 0;
 
   let licenseScore = 0;
-  if (rawData.licenseRisk === 'permissive') licenseScore = 4;
+  if (rawData.licenseRisk === 'none') licenseScore = 4;
   else if (rawData.licenseRisk === 'copyleft') licenseScore = 3;
   else if (rawData.licenseRisk === 'unknown') licenseScore = 1;
   else if (rawData.licenseRisk === 'unlicensed') licenseScore = 0;
@@ -633,6 +663,7 @@ function calculateHealthScore(rawData, deps) {
     openIssues,
     stars,
     forks,
+    primaryLanguage: rawData.primaryLanguage || repoData.language || null,
     deps,
     hasDeps: Boolean(deps),
     busFactor: rawData.busFactor,
@@ -1032,35 +1063,6 @@ async function setNotificationBadge(count) {
   }
 }
 
-async function getBookmarks() {
-  return (await getStorageValue(BOOKMARKS_KEY)) || [];
-}
-
-async function setBookmark(payload) {
-  if (!payload || !payload.owner || !payload.repo) {
-    return await getBookmarks();
-  }
-  const existing = await getBookmarks();
-  const repoKey = `${payload.owner}/${payload.repo}`;
-  const next = existing.filter((item) => `${item.owner}/${item.repo}` !== repoKey);
-  next.unshift({
-    owner: payload.owner,
-    repo: payload.repo,
-    tags: Array.isArray(payload.tags) ? payload.tags : [],
-    note: typeof payload.note === 'string' ? payload.note.slice(0, 200) : '',
-    addedAt: Date.now()
-  });
-  await setStorageValue({ [BOOKMARKS_KEY]: next });
-  return next;
-}
-
-async function removeBookmark(owner, repo) {
-  const repoKey = `${owner}/${repo}`;
-  const bookmarks = (await getBookmarks()).filter((item) => `${item.owner}/${item.repo}` !== repoKey);
-  await setStorageValue({ [BOOKMARKS_KEY]: bookmarks });
-  return bookmarks;
-}
-
 async function getRecentRepos() {
   return (await getStorageValue(RECENT_REPOS_KEY)) || [];
 }
@@ -1164,7 +1166,7 @@ async function checkWatchlistRepos() {
         hasDropAlert = true;
       }
     } catch (error) {
-      console.warn('[GH Health] watchlist check failed:', repoKey, error.message);
+      console.warn('[GitRevamp] watchlist check failed:', repoKey, error.message);
     }
   }
 
@@ -1231,9 +1233,6 @@ async function ensureDefaults() {
   }
   if (currentHidden === null) {
     await setStorageValue({ [BADGES_HIDDEN_KEY]: false });
-  }
-  if ((await getStorageValue(BOOKMARKS_KEY)) === null) {
-    await setStorageValue({ [BOOKMARKS_KEY]: [] });
   }
   if ((await getStorageValue(RECENT_REPOS_KEY)) === null) {
     await setStorageValue({ [RECENT_REPOS_KEY]: [] });
@@ -1423,7 +1422,7 @@ function clamp(value, min, max) {
 
 function logError(error) {
   const message = error instanceof Error ? error.message : String(error);
-  console.error('[GH Health]', message);
+  console.error('[GitRevamp]', message);
 }
 
 function isExpectedError(error) {
