@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "GitHub Repository Health",
+  "name": "GitRevamp",
   "version": "2.0.0",
-  "description": "Health scores, dependency risk, and trend history for GitHub repos.",
+  "description": "GitRevamp: health scores, dependency risk, and trend history for GitHub repos.",
   "permissions": ["storage", "activeTab", "tabs", "alarms", "notifications"],
   "homepage_url": "https://github.com/YOUR_USERNAME/YOUR_REPO",
   "minimum_chrome_version": "102",
