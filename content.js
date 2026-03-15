@@ -1,5 +1,4 @@
 const PROCESSED_ATTR = 'data-health-done';
-const BOOKMARK_ATTR = 'data-bookmark-done';
 
 const BUILTIN_PAGES = [
   'about', 'apps', 'blog', 'collections', 'contact', 'customer-stories', 'enterprise', 'events',
@@ -63,7 +62,7 @@ function isExpectedRuntimeError(error) {
 
 bootstrap().catch((error) => {
   if (!isExpectedRuntimeError(error)) {
-    console.error('[GH Health]', error.message);
+    console.error('[GitRevamp]', error.message);
   }
 });
 
@@ -121,6 +120,7 @@ function startObserver() {
 }
 
 function scanPage() {
+  cleanupAllBadges();
   const path = window.location.pathname;
   const segments = path.split('/').filter(Boolean);
 
@@ -138,8 +138,6 @@ function scanPage() {
       injectMarkdownPrintButton().catch(() => {});
       injectReadmePagePrintButton().catch(() => {});
     }
-
-    injectBookmarkButton(owner, repo).catch(() => {});
 
     if (settings.showVSIcons) {
       injectVSCodeFileIcons(owner, repo).catch(() => {});
@@ -177,26 +175,7 @@ function isProfileRoot(segments) {
 }
 
 function handleRepoPage(owner, repo) {
-  let title =
-    document.querySelector('[data-testid="repository-container-header"] h1') ||
-    document.querySelector('#repository-container-header h1') ||
-    document.querySelector('main > div h1:first-of-type') ||
-    document.querySelector('h1[class*="d-flex"]');
-
-  // Modern GitHub: repo name is in strong[itemprop="name"] inside a breadcrumb nav
-  if (!title) {
-    const strong = document.querySelector('#repository-container-header strong[itemprop="name"]') ||
-                   document.querySelector('strong[itemprop="name"]');
-    if (strong) {
-      title = strong.closest('a') || strong;
-    }
-  }
-
-  if (!title) return;
-  // Check if badge already exists
-  if (title.nextElementSibling && title.nextElementSibling.classList.contains('gh-health-badge')) return;
-  if (title.parentElement && title.parentElement.querySelector('.gh-health-badge')) return;
-  renderBadgeForTarget(title, owner, repo, 'page');
+  // Page-level health pill removed — no badge next to repo name
 }
 
 async function renderBadgeForTarget(target, owner, repo, context) {
@@ -547,7 +526,6 @@ const enhancedGithubApiUtil = {
       .fetch('https://api.github.com/repos/' + userRepo + contentParams, {
         headers: headers
       })
-      .then(function(resp) { console.log('[EG-SIZE] fetch response:', resp.status, 'url:', 'https://api.github.com/repos/' + userRepo + contentParams); return resp; })
       .then(enhancedGithubApiUtil.checkStatus)
       .then(enhancedGithubApiUtil.parseJSON)
       .then(function(data) {
@@ -608,11 +586,9 @@ const enhancedGithubHandlersUtil = {
     }
   },
   onPathContentFetched: function(data = []) {
-    console.log('[EG-SIZE] onPathContentFetched called, data length:', data ? data.length : 'null');
     data = enhancedGithubCommonUtil.sortFileStructureAsOnSite(data);
 
     if (!data) {
-      console.log('[EG-SIZE] data is null after sort, aborting');
       return;
     }
 
@@ -626,11 +602,8 @@ const enhancedGithubHandlersUtil = {
     }
 
     if (!isAnyFileOrDirPresent) {
-      console.log('[EG-SIZE] no files or dirs in data, aborting');
       return;
     }
-
-    console.log('[EG-SIZE] proceeding with file size injection');
     setTimeout(function() {
       enhancedGithubCommonUtil.removePrevInstancesOf('.eg-download');
 
@@ -647,18 +620,15 @@ const enhancedGithubHandlersUtil = {
       }
 
       const repoPath = enhancedGithubCommonUtil.getUsernameWithReponameFromGithubURL();
-      console.log('[EG-SIZE] repoPath:', repoPath.user + '/' + repoPath.repo, 'pathname:', window.location.pathname, 'branch:', enhancedGithubCommonUtil.getBranch());
 
       if (
         window.location.pathname !== `/${repoPath.user}/${repoPath.repo}` &&
         window.location.href.indexOf('tree/' + enhancedGithubCommonUtil.getBranch()) === -1
       ) {
-        console.log('[EG-SIZE] URL mismatch, aborting. Expected:', `/${repoPath.user}/${repoPath.repo}`);
         return;
       }
 
       const allRows = document.querySelectorAll('table > tbody > tr.react-directory-row, table > tbody > tr[class*="DirectoryContent"]');
-      console.log('[EG-SIZE] allRows found:', allRows.length);
       // Filter out the "Latest commit" header row and any non-file rows
       const containerItems = Array.from(allRows).filter(function(row) {
         // Skip the Latest Commit header row
@@ -666,10 +636,8 @@ const enhancedGithubHandlersUtil = {
         return true;
       });
       const firstCell = document.querySelectorAll('tbody tr > td:nth-child(1)')[0];
-      console.log('[EG-SIZE] containerItems after filter:', containerItems.length, 'firstCell:', !!firstCell);
 
       if (!containerItems.length || !firstCell) {
-        console.log('[EG-SIZE] no rows or no firstCell, aborting');
         return;
       }
 
@@ -904,9 +872,7 @@ const enhancedGithubDomUtil = {
     }
   },
   addFileSizeAndDownloadLink: function() {
-    console.log('[EG-SIZE] addFileSizeAndDownloadLink called');
     enhancedGithubApiUtil.getRepoContent(function(data) {
-      console.log('[EG-SIZE] getRepoContent callback, data:', data ? 'has data (' + (Array.isArray(data) ? data.length + ' items' : 'object') + ')' : 'null');
       enhancedGithubHandlersUtil.onPathContentFetched(data);
     });
   }
@@ -937,6 +903,11 @@ async function enhancedGithubMainEntry(_owner, _repo) {
   }
 
   const currentUrl = window.location.href;
+  if (enhancedGithubLastUrl !== currentUrl) {
+    // Reset in-memory storage when navigating to a different page
+    delete enhancedGithubStorageUtil['defaultBranch'];
+    delete enhancedGithubStorageUtil['repoSize'];
+  }
   enhancedGithubLastUrl = currentUrl;
   enhancedGithubDomUtil.addRepoData();
 }
@@ -997,6 +968,56 @@ function updateStateBadge(badge, context, errorCode) {
   if (text) {
     text.textContent = label;
   }
+}
+
+function getColorClass(score) {
+  const n = Number(score);
+  if (n >= 80) return 'green';
+  if (n >= 60) return 'yellow';
+  if (n >= 40) return 'orange';
+  return 'red';
+}
+
+function sanitizeNumber(value) {
+  const n = Number(value);
+  if (Number.isNaN(n) || !Number.isFinite(n)) return 0;
+  return Math.max(0, Math.round(n));
+}
+
+function safeNonNegative(value) {
+  const n = Number(value);
+  if (Number.isNaN(n) || !Number.isFinite(n)) return 0;
+  return Math.max(0, Math.round(n));
+}
+
+function stripTrailingZero(num) {
+  const n = Number(num);
+  if (Number.isNaN(n)) return '0';
+  const fixed = n.toFixed(1);
+  return fixed.endsWith('.0') ? String(Math.round(n)) : fixed;
+}
+
+function buildSparklineSvg(scores, colorClass) {
+  if (!scores || scores.length < 2) return '';
+  const w = 120;
+  const h = 24;
+  const pad = 2;
+  const max = Math.max(...scores);
+  const min = Math.min(...scores);
+  const range = max - min || 1;
+  const coords = scores.map((s, i) => {
+    const x = pad + (i / (scores.length - 1)) * (w - pad * 2);
+    const y = h - pad - ((s - min) / range) * (h - pad * 2);
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  });
+  const stroke = colorClass === 'green' ? '#3fb950' : colorClass === 'yellow' ? '#d29922' : colorClass === 'orange' ? '#db6d28' : '#f85149';
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none" style="vertical-align:middle"><polyline points="${coords.join(' ')}" stroke="${stroke}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" /></svg>`;
+}
+
+function formatLicenseShortName(licenseName, licenseKey) {
+  if (licenseKey) return licenseKey.toUpperCase();
+  if (licenseName) return licenseName;
+  return 'Unknown';
 }
 
 function buildHealthBadge(data, history, context) {
@@ -1130,91 +1151,6 @@ function getLicenseBadgeLine(data) {
     return 'â“ License unclear';
   }
   return null;
-}
-
-async function injectBookmarkButton(owner, repo) {
-  const container = document.querySelector('#repository-container-header ul, #repository-container-header .pagehead-actions');
-  if (!container || container.hasAttribute(BOOKMARK_ATTR)) return;
-  container.setAttribute(BOOKMARK_ATTR, 'true');
-
-  let bookmarks = [];
-  try {
-    const response = await sendMessage({ type: 'GET_BOOKMARKS' });
-    bookmarks = (response && response.bookmarks) || [];
-  } catch (_error) {
-    bookmarks = [];
-  }
-
-  const key = `${owner}/${repo}`;
-  const existing = bookmarks.find((item) => `${item.owner}/${item.repo}` === key);
-  let isBookmarked = Boolean(existing);
-
-  const host = document.createElement('li');
-  host.className = 'd-inline-flex gh-bookmark-host';
-
-  const svgIcon = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:middle;margin-right:4px"><path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 01-1.28.53L8 11.06l-3.72 3.72A.75.75 0 013 14.25V2.75z"/></svg>`;
-
-  function setBookmarkLabel(btn, isBookmarked) {
-    btn.innerHTML = svgIcon + (isBookmarked ? 'Bookmarked' : 'Bookmark');
-  }
-
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'btn btn-sm gh-bookmark-btn';
-  setBookmarkLabel(button, Boolean(existing));
-
-  const panel = document.createElement('div');
-  panel.className = 'gh-bookmark-panel';
-
-  const tagsInput = document.createElement('input');
-  tagsInput.type = 'text';
-  tagsInput.className = 'gh-bookmark-input';
-  tagsInput.placeholder = 'reference, typescript, work';
-  tagsInput.value = existing ? (existing.tags || []).join(', ') : '';
-
-  const noteInput = document.createElement('textarea');
-  noteInput.className = 'gh-bookmark-note';
-  noteInput.maxLength = 200;
-  noteInput.placeholder = 'Short note (optional)';
-  noteInput.value = existing ? (existing.note || '') : '';
-
-  const saveButton = document.createElement('button');
-  saveButton.type = 'button';
-  saveButton.className = 'btn btn-sm';
-  saveButton.textContent = isBookmarked ? 'Remove Bookmark' : 'Save Bookmark';
-
-  saveButton.addEventListener('click', async () => {
-    if (isBookmarked) {
-      await sendMessage({ type: 'REMOVE_BOOKMARK', payload: { owner, repo } });
-      isBookmarked = false;
-      setBookmarkLabel(button, false);
-    } else {
-      const tags = tagsInput.value.split(',').map((item) => item.trim()).filter(Boolean);
-      await sendMessage({ type: 'SET_BOOKMARK', payload: { owner, repo, tags, note: noteInput.value.trim() } });
-      isBookmarked = true;
-      setBookmarkLabel(button, true);
-    }
-    saveButton.textContent = isBookmarked ? 'Remove Bookmark' : 'Save Bookmark';
-    panel.classList.remove('is-open');
-  });
-
-  button.addEventListener('click', (event) => {
-    event.stopPropagation();
-    panel.classList.toggle('is-open');
-  });
-
-  panel.appendChild(tagsInput);
-  panel.appendChild(noteInput);
-  panel.appendChild(saveButton);
-  host.appendChild(button);
-  host.appendChild(panel);
-  container.appendChild(host);
-
-  document.addEventListener('click', (event) => {
-    if (!host.contains(event.target)) {
-      panel.classList.remove('is-open');
-    }
-  });
 }
 
 async function trackRecentRepo(owner, repo) {
@@ -1824,22 +1760,12 @@ async function injectVSCodeFileIcons(owner, repo) {
   );
   if (!tree) return;
 
-  console.log('[GH Health] Found tree:', tree.tagName, tree.className);
-
   const rows = Array.from(
     tree.querySelectorAll('tr, div[role="row"], [class*="TreeRow"], [class*="row"]')
   ).filter(row => !row.querySelector('th') && !row.getAttribute('role')?.includes('columnheader'));
 
-  console.log('[GH Health] Found rows:', rows.length);
-
   rows.forEach(function (row) {
     if (row.hasAttribute('data-vsicon-row')) return;
-
-    // Log the first row to understand structure
-    if (!tree.hasAttribute('data-debug-logged')) {
-      tree.setAttribute('data-debug-logged', 'true');
-      console.log('[GH Health] First row HTML:', row.outerHTML.slice(0, 500));
-    }
 
     const fileLink = row.querySelector('a[href*="/' + owner + '/' + repo + '/blob/"]');
     const folderLink = row.querySelector('a[href*="/' + owner + '/' + repo + '/tree/"]');
@@ -2060,7 +1986,6 @@ var locModalData = null;
 
 async function injectLOCInSidebar(owner, repo) {
   if (!/^\/[^/]+\/[^/]+\/?$/.test(location.pathname)) {
-    console.log('[GH-LOC] skipped: not a repo root page', location.pathname);
     return;
   }
 
@@ -2099,8 +2024,6 @@ async function injectLOCInSidebar(owner, repo) {
     }
   }
 
-  console.log('[GH-LOC] sidebar found:', !!sidebar, sidebar?.tagName, sidebar?.className?.substring(0, 80));
-
   if (!sidebar) return;
   // Check if LOC row already exists instead of attribute on persistent sidebar
   if (sidebar.querySelector('.gh-loc-stat-row') || document.querySelector('.gh-loc-stat-row')) return;
@@ -2123,8 +2046,6 @@ async function injectLOCInSidebar(owner, repo) {
                  document.querySelector('a[href$="/forks"]');
   var statsContainer = null;
 
-  console.log('[GH-LOC] forkLink found:', !!forkLink, forkLink?.href);
-
   if (forkLink) {
     // Try UL first (legacy GitHub), then any common parent container
     statsContainer = forkLink.closest('ul');
@@ -2139,7 +2060,6 @@ async function injectLOCInSidebar(owner, repo) {
         statsContainer = forkParent.parentElement;
       }
     }
-    console.log('[GH-LOC] statsContainer from forkLink:', !!statsContainer, statsContainer?.tagName, statsContainer?.className?.substring(0, 80));
   }
 
   if (!statsContainer || statsContainer === sidebar) {
@@ -2162,7 +2082,6 @@ async function injectLOCInSidebar(owner, repo) {
   if (statsContainer && statsContainer.tagName === 'UL') {
     // Legacy: use li element (already set)
     statsContainer.appendChild(locRow);
-    console.log('[GH-LOC] appended to stats UL:', statsContainer.className?.substring(0, 80));
   } else if (statsContainer && statsContainer !== sidebar) {
     // Modern GitHub: container is a div, convert locRow to a div-based element
     var locDiv = document.createElement('div');
@@ -2175,16 +2094,13 @@ async function injectLOCInSidebar(owner, repo) {
     statsContainer.appendChild(locDiv);
     // Replace locRow reference for later API update
     locRow = locDiv;
-    console.log('[GH-LOC] appended to stats container:', statsContainer.tagName, statsContainer.className?.substring(0, 80));
   } else {
     // Fallback: try inserting after the forks link parent
     var fallbackParent = forkLink ? (forkLink.closest('.d-flex') || forkLink.parentElement?.parentElement) : null;
     if (fallbackParent) {
       fallbackParent.insertAdjacentElement('afterend', locRow);
-      console.log('[GH-LOC] inserted after fallback parent');
     } else {
       sidebar.appendChild(locRow);
-      console.log('[GH-LOC] appended to sidebar');
     }
   }
 
@@ -2192,13 +2108,11 @@ async function injectLOCInSidebar(owner, repo) {
     openLOCModal(owner, repo, locModalData);
   });
 
-  var response = await sendMessage({ type: 'GET_LOC_FULL', payload: { owner: owner, repo: repo } }).catch(function (err) { console.log('[GH-LOC] API error:', err); return null; });
+  var response = await sendMessage({ type: 'GET_LOC_FULL', payload: { owner: owner, repo: repo } }).catch(function () { return null; });
   var data = response && response.data;
-  console.log('[GH-LOC] API response:', !!data, data ? data.total : 'no data');
 
   var numSpan = locRow.querySelector('.gh-loc-stat-number');
   if (!data || !data.total) {
-    console.log('[GH-LOC] no LOC data available');
     numSpan.textContent = 'N/A';
   } else {
     locModalData = data;
@@ -2716,9 +2630,8 @@ async function injectHealthSidebarPanel(owner, repo) {
 function cleanupAllBadges() {
   document.querySelectorAll('.gh-health-badge').forEach((badge) => badge.remove());
   document.querySelectorAll('.eg-download, .eg-repo-size, .js-file-clipboard, .js-file-download, .js-enhanced-github-copy-btn, .gh-md-print-btn, .gh-webide-wrap, .gh-loc-stat-row, .gh-loc-modal-backdrop, .gh-health-sidebar-panel, .gh-abs-date-span').forEach((node) => node.remove());
-  document.querySelectorAll('[data-health-done], [data-bookmark-done], [data-md-print-done], [data-readme-print-done], [data-vsicons-done], [data-vsicon-row], [data-vsicon], [data-webide-done], [data-loc-sidebar-done], [data-health-panel-done], [data-abs-converted], [data-abs-hidden]').forEach((element) => {
+  document.querySelectorAll('[data-health-done], [data-md-print-done], [data-readme-print-done], [data-vsicons-done], [data-vsicon-row], [data-vsicon], [data-webide-done], [data-loc-sidebar-done], [data-health-panel-done], [data-abs-converted], [data-abs-hidden]').forEach((element) => {
     element.removeAttribute('data-health-done');
-    element.removeAttribute('data-bookmark-done');
     element.removeAttribute('data-md-print-done');
     element.removeAttribute('data-readme-print-done');
     element.removeAttribute('data-vsicons-done');
