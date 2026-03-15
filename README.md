@@ -8,64 +8,40 @@
 [![GitHub Stars](https://img.shields.io/github/stars/parteek1907/gitrevamp?style=flat-square&color=gold)](https://github.com/parteek1907/gitrevamp/stargazers)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/parteek1907/gitrevamp/pulls)
 
-**GitRevamp is a powerful Chrome extension that transforms your GitHub workflow — adding health scores, VS Code-style file icons, lines of code insights, web IDE access, and 15+ developer tools directly into GitHub's UI.**
+**GitRevamp is a Chrome extension that enhances GitHub with 9 developer tools — health scoring, VS Code-style file icons, lines of code stats, and more — injected directly into GitHub's UI.**
 
-[Install](#-installation) · [Features](#-features) · [Screenshots](#-screenshots) · [Tech Stack](#-tech-stack) · [Contributing](#-contributing)
+[Install](#-installation) · [Features](#-features) · [Contributing](#-contributing)
 
 </div>
 
 ---
 
-## 📌 What is GitRevamp?
-
-GitHub is powerful — but it doesn't tell you everything. GitRevamp fills the gaps:
-
-- Is this repo actively maintained? → **Health Score Badge**
-- How many lines of code? → **LOC in Sidebar**
-- Who owns most of the codebase? → **Bus Factor Warning**
-- What's the PR complexity before reviewing? → **PR Complexity Score**
-- Open it in VS Code instantly? → **Web IDE Button**
-
-GitRevamp injects these insights directly into GitHub pages — no tab-switching, no copy-pasting URLs, no manual analysis.
-
----
-
 ## ✨ Features
 
-### 🏥 Repository Health
+### 🏥 Health & Risk
 | Feature | Description |
 |---------|-------------|
-| **Health Score Badge** | Scores every repo 0–10 based on activity, maintenance, and popularity. Shows inline on repo pages, search results, and trending. |
-| **Health Sidebar Panel** | Full breakdown panel in the About section — activity score, maintenance score, popularity score with visual bars. |
-| **Watchlist** | Track repos and get alerted when their health score drops by 1.0+. |
-| **Bus Factor Warning** | Warns when a single contributor owns >60% of commits — single point of failure risk. |
-| **License Risk Warning** | Flags unlicensed repos and copyleft licenses (GPL, AGPL) that may affect commercial use. |
+| **Health Sidebar Panel** | Scores every repo 0–10 based on activity, maintenance, and popularity. Full breakdown shown in the About section with visual bars. |
+| **Bus Factor Warning** | Warns when a single contributor owns >60% of commits — a key sustainability risk signal. |
+| **License Risk Warning** | Flags repos with no license or copyleft licenses (GPL, AGPL) that may affect commercial use. |
 
 ### 📊 Code Insights
 | Feature | Description |
 |---------|-------------|
-| **LOC in Sidebar** | Shows total lines of code in the About section. Click to open a full breakdown modal — folder-wise and language-wise with interactive checkboxes and color bars. |
-| **Star History Sparkline** | Shows a mini star growth chart below the star count with monthly growth estimate. |
-| **Commit Quality Indicators** | Marks commits as ✅ good or ⚠️ poor based on conventional commit format. Shows summary score on commit listing pages. |
-| **PR Complexity Score** | Classifies pull requests as Simple / Moderate / Large / Massive based on files changed and lines modified. |
+| **LOC in Sidebar** | Shows total lines of code in the About section. Click to open a full breakdown modal — language-wise and folder-wise with interactive filters. |
 
 ### 🎨 Visual Enhancements
 | Feature | Description |
 |---------|-------------|
-| **VS Code File Icons** | Replaces GitHub's default file icons with VS Code Material Icon Theme-style icons — 80+ file types and 40+ named folders supported. |
-| **Absolute Dates** | Shows exact dates (DD/MM/YY, HH:MM) alongside GitHub's relative timestamps ("3 days ago"). |
-| **Issue Age Heatmap** | Color-codes issues by age: New / Recent / Aging / Old / Stale. |
-| **TODO Highlights** | Highlights TODO, FIXME, HACK, BUG, DEPRECATED annotations in source files with colored pills. |
+| **VS Code Icons** | Replaces GitHub's default file icons with VS Code Material Icon Theme-style SVG icons — 80+ file types and 40+ named folders. |
+| **Absolute Dates** | Shows exact timestamps (DD/MM/YY, HH:MM) alongside GitHub's relative times like "3 days ago". |
 
 ### ⚡ Workflow Tools
 | Feature | Description |
 |---------|-------------|
-| **Web IDE Button** | One-click access to CodeSandbox, GitHub1s, Replit, Gitpod, StackBlitz, VS Code, Cursor, or Windsurf. |
-| **Quick Clone Button** | Instantly copy SSH, HTTPS, or GitHub CLI clone commands with your preferred format saved. |
+| **Web IDE Button** | One-click access to CodeSandbox, GitHub1s, Replit, Gitpod, StackBlitz, or VS Code Desktop. |
 | **File Sizes & Download** | Shows file sizes in the tree view. Adds Copy and Download buttons on file pages. |
 | **Markdown Printer** | Adds a Print button to README and markdown file pages for clean rendered output. |
-| **README Table of Contents** | Auto-generates a floating TOC panel on README pages with active heading tracking. |
-| **Contribution Insights** | Adds current streak, longest streak, most active day, and best day stats below the contribution graph on profile pages. |
 
 ---
 
@@ -80,62 +56,40 @@ GitRevamp injects these insights directly into GitHub pages — no tab-switching
 ```bash
 # 1. Clone the repository
 git clone https://github.com/parteek1907/gitrevamp.git
-cd gitrevamp
 
-# 2. Open Chrome and go to
-chrome://extensions/
+# 2. Open Chrome and go to chrome://extensions/
 
-# 3. Enable "Developer mode" (top right toggle)
+# 3. Enable "Developer mode" (top-right toggle)
 
 # 4. Click "Load unpacked" and select the gitrevamp folder
 
-# 5. Visit any GitHub repo — you're done!
+# 5. Visit any GitHub repo — done!
 ```
 
 ---
 
 ## ⚙️ Configuration
 
-On first install, GitRevamp walks you through a quick onboarding:
-
-1. **Step 1** — Optionally add a GitHub Personal Access Token (PAT) for higher API rate limits (5,000 calls/hour vs 60/hour unauthenticated)
-2. **Step 2** — Enable or disable individual features to match your workflow
-
-All settings are accessible anytime via the extension popup → **Settings tab**.
+On first install, GitRevamp shows a quick onboarding screen where you can enable or disable each of the 9 features. All settings are accessible later via the extension popup → **Settings tab**.
 
 ### GitHub PAT (Optional but Recommended)
-A PAT increases your API rate limit significantly. To generate one:
-1. Go to GitHub → Settings → Developer settings → Personal access tokens
-2. Generate a token with **public_repo** scope (read-only is fine)
+Adding a GitHub Personal Access Token upgrades your API rate limit from 60 to 5,000 requests/hour.
+
+1. GitHub → Settings → Developer settings → Personal access tokens
+2. Generate a token with **public_repo** scope
 3. Paste it in GitRevamp Settings
-
----
-
-## 🖥️ Screenshots
-
-> *Screenshots coming soon — install the extension to see it in action!*
-
-| Feature | Preview |
-|---------|---------|
-| Health Score Badge | Inline score on every repo |
-| LOC Modal | Folder + language breakdown |
-| VS Code Icons | Material icons in file tree |
-| Web IDE Dropdown | One-click IDE access |
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
+| Layer | Details |
+|-------|---------|
 | **Platform** | Chrome Extension — Manifest V3 |
-| **Language** | Vanilla JavaScript (zero dependencies) |
-| **APIs** | GitHub REST API v3, codetabs.com LOC API, OSV.dev CVE API, npmjs Registry |
+| **Language** | Vanilla JavaScript — zero external dependencies |
+| **APIs** | GitHub REST API v3, codetabs.com (LOC), OSV.dev (CVE) |
 | **Storage** | `chrome.storage.local` |
-| **Icons** | VS Code Material Icon Theme (SVG, locally bundled) |
-| **Build** | No build step — pure MV3 service worker + content script |
-
-> No React, Vue, webpack, or npm packages. The entire extension is plain JavaScript running directly in the browser.
+| **Icons** | VS Code Material Icon Theme SVGs, locally bundled |
 
 ---
 
@@ -143,70 +97,47 @@ A PAT increases your API rate limit significantly. To generate one:
 
 ```
 gitrevamp/
-├── manifest.json              # MV3 extension manifest
-├── background.js              # Service worker — API calls, scoring, caching
-├── content.js                 # Content script — DOM injection, all features
-├── style.css                  # Injected styles for all UI components
-├── popup.html                 # Extension popup
-├── popup.js                   # Popup logic — overview, watchlist, compare, settings
-├── popup.css                  # Popup styles
-├── onboarding.html            # First-run onboarding page
-├── markdown-printer-style.css # Print styles for markdown pages
+├── manifest.json
+├── background.js       # Service worker — all API calls, scoring, caching
+├── content.js          # Content script — DOM injection for all features
+├── style.css           # Injected styles
+├── popup.html/js/css   # Extension popup
+├── onboarding.html     # First-run setup page
 └── icons/
     ├── icon16.png
     ├── icon48.png
     ├── icon128.png
-    └── file-icons/            # 100+ VS Code Material Icon SVGs
+    └── file-icons/     # VS Code Material Icon SVGs
 ```
 
 ---
 
-## 🔌 Permissions Explained
+## 🔌 Permissions
 
-| Permission | Why It's Needed |
-|-----------|----------------|
-| `storage` | Save settings, watchlist, bookmarks, and cached health data locally |
-| `activeTab` | Read the current GitHub tab URL to detect repo context |
-| `tabs` | Send messages between popup and content script |
-| `alarms` | Schedule periodic watchlist health checks |
-| `https://api.github.com/*` | Fetch repo metadata, contributors, commit stats |
-| `https://raw.githubusercontent.com/*` | Read package.json for dependency analysis |
-| `https://registry.npmjs.org/*` | Check npm package staleness |
-| `https://api.osv.dev/*` | Check for known CVEs in dependencies |
-| `https://api.codetabs.com/*` | Fetch lines of code statistics |
+| Permission | Reason |
+|-----------|--------|
+| `storage` | Save settings and cached data locally |
+| `activeTab` | Detect current GitHub page context |
+| `tabs` | Communicate between popup and content script |
+| `alarms` | Periodic background health checks |
+| `https://api.github.com/*` | Repo metadata, contributors, commit stats |
+| `https://api.codetabs.com/*` | Lines of code statistics |
+| `https://api.osv.dev/*` | Known CVEs for dependency scanning |
 
-GitRevamp **never** sends your data to any external server. All processing happens locally in your browser.
+GitRevamp **never** sends your data to any external server. All processing is local.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Whether it's a bug fix, new feature, or documentation improvement.
-
 ```bash
-# Fork and clone
 git clone https://github.com/parteek1907/gitrevamp.git
-
-# Create a feature branch
 git checkout -b feature/your-feature-name
-
-# Make your changes, then load unpacked in Chrome to test
-
-# Submit a pull request
+# make changes, test in Chrome
+# submit a pull request
 ```
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting.
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Similar repositories suggestions
-- [ ] Isometric contribution graph
-- [ ] GitZip — download folders as ZIP
-- [ ] Notification grouping in popup
-- [ ] Firefox support (MV2 port)
-- [ ] Chrome Web Store publish
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines.
 
 ---
 
@@ -214,16 +145,12 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting.
 
 MIT License — see [LICENSE](LICENSE) for details.
 
----
-
-## 👤 Author
-
-**Parteek Garg**
+**Built by [Parteek Garg](https://github.com/parteek1907)**
 
 ---
 
 <div align="center">
 
-**If GitRevamp saves you time, please ⭐ star the repo — it helps others discover it!**
+**If GitRevamp saves you time, please ⭐ star the repo!**
 
 </div>
