@@ -2629,7 +2629,10 @@ async function injectHealthSidebarPanel(owner, repo) {
 
 function cleanupAllBadges() {
   document.querySelectorAll('.gh-health-badge').forEach((badge) => badge.remove());
-  document.querySelectorAll('.eg-download, .eg-repo-size, .js-file-clipboard, .js-file-download, .js-enhanced-github-copy-btn, .gh-md-print-btn, .gh-webide-wrap, .gh-loc-stat-row, .gh-loc-modal-backdrop, .gh-health-sidebar-panel, .gh-abs-date-span').forEach((node) => node.remove());
+  // Do NOT remove .eg-download, .eg-repo-size, .js-file-clipboard, .js-file-download,
+  // .js-enhanced-github-copy-btn here — those elements self-clean before re-injection
+  // (via removePrevInstancesOf) and removing them here causes a visible flash.
+  document.querySelectorAll('.gh-md-print-btn, .gh-webide-wrap, .gh-loc-stat-row, .gh-loc-modal-backdrop, .gh-health-sidebar-panel, .gh-abs-date-span').forEach((node) => node.remove());
 
   // Remove injected VS Code icons and restore the original SVG icons
   document.querySelectorAll('img[data-vsicon]').forEach((img) => {
