@@ -220,57 +220,6 @@
   border-bottom: 0;
 }
 
-.gh-bookmark-host {
-  position: relative;
-}
-
-.gh-bookmark-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 32px;
-  padding: 5px 12px;
-  font-size: 12px;
-  line-height: 20px;
-  color: var(--color-fg-default);
-  background: var(--color-btn-bg);
-  border: 1px solid var(--color-btn-border);
-}
-
-.gh-bookmark-panel {
-  display: none;
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  width: 300px;
-  border: 1px solid var(--color-border-default, #d0d7de);
-  border-radius: 8px;
-  padding: 8px;
-  background: var(--color-canvas-default, #ffffff);
-  z-index: 450;
-}
-
-.gh-bookmark-panel.is-open {
-  display: block;
-}
-
-.gh-bookmark-input,
-.gh-bookmark-note {
-  width: 100%;
-  margin-bottom: 8px;
-  border: 1px solid var(--color-border-default, #d0d7de);
-  border-radius: 6px;
-  padding: 6px;
-  color: var(--color-fg-default, #1f2328);
-  background: var(--color-canvas-default, #ffffff);
-  font-size: 12px;
-}
-
-.gh-bookmark-note {
-  min-height: 72px;
-  resize: vertical;
-}
-
 .gh-commit-quality-icon {
   margin-left: 6px;
   font-size: 12px;
@@ -922,7 +871,7 @@ local-time[data-abs-hidden] {
   left: 0;
   top: 130px;
   height: calc(100vh - 130px);
-  width: var(--ghh-sidebar-width-collapsed);
+  width: 0;
   z-index: 9999;
   background: transparent;
   border-right: none;
@@ -934,6 +883,11 @@ local-time[data-abs-hidden] {
   transition: var(--ghh-sidebar-transition);
   overflow: visible;
   border-radius: 0 12px 12px 0;
+  pointer-events: none;
+}
+
+.ghh-sidebar .ghh-toggle-chevron {
+  pointer-events: auto;
 }
 
 .ghh-sidebar.ghh-open {
@@ -944,6 +898,7 @@ local-time[data-abs-hidden] {
   border-right: 1px solid var(--ghh-sidebar-border);
   box-shadow: var(--ghh-sidebar-shadow);
   overflow: visible;
+  pointer-events: auto;
 }
 
 
@@ -1025,7 +980,7 @@ local-time[data-abs-hidden] {
 /* ── Toggle Chevron (right edge) ── */
 .ghh-toggle-chevron {
   position: absolute;
-  right: -16px;
+  left: 0;
   top: 50%;
   transform: translateY(-50%);
   width: 32px;
@@ -1067,6 +1022,7 @@ local-time[data-abs-hidden] {
 }
 
 .ghh-sidebar.ghh-open .ghh-toggle-chevron {
+  left: calc(var(--ghh-sidebar-width-expanded) - 16px);
   transform: translateY(-50%) rotate(180deg);
 }
 
