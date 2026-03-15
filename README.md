@@ -97,17 +97,34 @@ Adding a GitHub Personal Access Token upgrades your API rate limit from 60 to 5,
 
 ```
 gitrevamp/
-├── manifest.json
-├── background.js       # Service worker — all API calls, scoring, caching
-├── content.js          # Content script — DOM injection for all features
-├── style.css           # Injected styles
-├── popup.html/js/css   # Extension popup
-├── onboarding.html     # First-run setup page
+├── manifest.json                  # MV3 extension manifest
+├── background.js                  # Service worker — all API calls, scoring, caching
+├── background.ts                  # TypeScript source for background
+├── content.js                     # Content script — DOM injection for all features
+├── sidebar.js                     # Sidebar panel logic
+├── style.css                      # Injected styles for all UI components
+├── markdown-printer-style.css     # Print styles for markdown pages
+│
+├── popup.html                     # Extension popup markup
+├── popup.js                       # Popup logic
+├── popup.css                      # Popup styles
+│
+├── onboarding.html                # First-run setup page
+├── onboarding.js                  # Onboarding logic (source)
+├── onboarding.ts                  # TypeScript source for onboarding
+├── onboarding.bundle.js           # Bundled onboarding script
+├── onboarding.bundle.css          # Bundled onboarding styles
+├── onboarding.css                 # Onboarding base styles
+│
+├── LICENSE
+├── README.md
+├── Contributing.md
+│
 └── icons/
     ├── icon16.png
     ├── icon48.png
     ├── icon128.png
-    └── file-icons/     # VS Code Material Icon SVGs
+    └── file-icons/                # VS Code Material Icon SVGs (80+ types)
 ```
 
 ---
